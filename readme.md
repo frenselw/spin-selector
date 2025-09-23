@@ -4,6 +4,12 @@ SpinSelector is a simple, powerful, and portable standalone web application for 
 
 The entire application runs in a single HTML file with no backend or installation required, making it incredibly portable and easy to use.
 
+## Motivation and Inspiration
+
+This project is inspired by the excellent online tool, Wheel of Names. 
+
+The primary motivation for creating SpinSelector was the need for a faster, offline-capable alternative. In a classroom setting, waiting for a website to load can disrupt the flow of a lesson. SpinSelector was built to be a simple, portable, and incredibly fast tool that "just works" without an internet connection, allowing teachers and other users to get things done efficiently.
+
 ## Features
 
 - **Dynamic Wheel:** The wheel is generated instantly from your list of entries.
