@@ -1,0 +1,29 @@
+# SpinSelector
+
+SpinSelector is a simple, powerful, and portable standalone web application for making random selections. It's perfect for teachers choosing students, teams making decisions, or anyone needing a fun and fair way to pick from a list.
+
+The entire application runs in a single HTML file with no backend or installation required, making it incredibly portable and easy to use.
+
+## Features
+
+- **Dynamic Wheel:** The wheel is generated instantly from your list of entries.
+- **Exciting Spin:** A smooth animation accelerates and decelerates the wheel for a satisfying spin.
+- **Winner Announcement:** A clear, celebratory pop-up announces the winner with confetti.
+- **Remove After Picking:** Option to remove the winner from the list for elimination-style draws.
+- **Customizable Themes:** Choose from multiple color themes to personalize your experience.
+- **List Management:**
+    - Save multiple lists directly in your browser.
+    - Load any saved list with a single click.
+- **Full Portability:**
+    - Export all your saved lists to a single file.
+    - Import lists on any other computer, making the app and your data truly portable.
+
+## How to Use
+
+1.  Open the `index.html` file in any modern web browser.
+2.  Type your items into the "Entries" text box, with each item on a new line.
+3.  Click the wheel to spin!
+
+## License
+
+This software is open-source, created by **Hang Wong**, and licensed under the **GNU Affero General Public License v3.0 (AGPLv3)**.
