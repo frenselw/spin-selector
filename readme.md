@@ -30,6 +30,13 @@ The primary motivation for creating SpinSelector was the need for a faster, offl
 2.  Type your items into the "Entries" text box, with each item on a new line.
 3.  Click the wheel to spin!
 
+## Changelog
+
+### 1.1.0 (September 25, 2025)
+- **Performance Improvements:** Enhanced spinning animation for large lists (30+ entries) by pre-rendering the wheel segments on an offscreen canvas, significantly reducing frame drops.
+- **Text Rendering Fixes:** Addressed text deformation during rotation with pixel-aligned coordinates, reduced shadow blur, and crisper positioning to minimize blurring and aliasing.
+- **Optimization Tweaks:** Added debounced canvas resizing for smoother handling of window changes; preserved idle rotation but optimized animation loop.
+
 ## License
 
 This software is open-source, created by **Hang Wong**, and licensed under the **GNU Affero General Public License v3.0 (AGPLv3)**.

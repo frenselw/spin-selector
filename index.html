@@ -7,7 +7,7 @@
     <title>SpinSelector</title>
     <!--
     SpinSelector - A Standalone Random Name Picker Wheel
-    Version: 1.0.0
+    Version: 1.1.0
 
     Copyright (C) 2025 Hang Wong
 
@@ -166,7 +166,7 @@ Helen</textarea>
                         data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-body-secondary">Version 1.0.0</p>
+                    <p class="text-body-secondary">Version 1.1.0</p>
                     <p>&copy; 2025 Hang Wong.</p>
                     <p>This software is open-source and licensed under the <a
                             href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank"
@@ -184,9 +184,9 @@ Helen</textarea>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const wheelCanvas = document.getElementById('wheel');
-            const ctx = wheelCanvas.getContext('2d');
+            const ctx = wheelCanvas.getContext('2d', { willReadFrequently: false });
             const confettiCanvas = document.getElementById('confetti-canvas');
-            const confettiCtx = confettiCanvas.getContext('2d');
+            const confettiCtx = confettiCanvas.getContext('2d', { willReadFrequently: false });
 
             const shuffleButton = document.getElementById('shuffle');
             const namesInput = document.getElementById('names');
@@ -222,6 +222,9 @@ Helen</textarea>
             let currentColors = themes.dark;
             let savedLists = {};
             let rotation = 0;
+            let offscreenCanvas;
+            let offscreenCtx;
+            let resizeTimeout;
             let isSpinning = false;
             let spinStartTime = 0;
             let startRotation = 0;
@@ -258,74 +261,143 @@ Helen</textarea>
                 infoModal.show();
             };
 
-            const updateNames = () => {
-                names = namesInput.value.split('\n').filter(name => name.trim() !== '');
+            const resizeCanvas = () => {
+                const canvasSize = Math.min(window.innerWidth * 0.7, 800, window.innerHeight * 0.85);
+                wheelCanvas.width = canvasSize;
+                wheelCanvas.height = canvasSize;
+                confettiCanvas.width = canvasSize;
+                confettiCanvas.height = canvasSize;
+                if (offscreenCanvas) {
+                    offscreenCanvas.width = canvasSize;
+                    offscreenCanvas.height = canvasSize;
+                }
                 drawWheel();
             };
+
+            const debounceResize = () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(resizeCanvas, 100);
+            };
+
+            window.addEventListener('resize', debounceResize);
+
+            const prerenderWheel = (numSegments, radius, fontSize, anglePerSegment) => {
+                if (numSegments === 0) {
+                    offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+                    return;
+                }
+
+                offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+                offscreenCtx.save();
+                offscreenCtx.translate(radius, radius);
+
+                names.forEach((name, i) => {
+                    const angle = i * anglePerSegment;
+                    offscreenCtx.beginPath();
+                    offscreenCtx.moveTo(0, 0);
+                    offscreenCtx.arc(0, 0, radius - 2, angle, angle + anglePerSegment);
+                    offscreenCtx.closePath();
+                    offscreenCtx.fillStyle = currentColors[i % currentColors.length];
+                    offscreenCtx.fill();
+
+                    const strokeStyle = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? "#1a1a1a" : "#ffffff";
+                    offscreenCtx.lineWidth = 3;
+                    offscreenCtx.strokeStyle = strokeStyle;
+                    offscreenCtx.stroke();
+
+                    // Draw text rotated for each segment
+                    offscreenCtx.save();
+                    offscreenCtx.rotate(angle + anglePerSegment / 2);
+                    offscreenCtx.fillStyle = "#fff";
+                    offscreenCtx.font = `bold ${fontSize}px Arial`;
+                    offscreenCtx.textAlign = "right";
+                    offscreenCtx.textBaseline = "middle";
+                    offscreenCtx.shadowColor = "black";
+                    offscreenCtx.shadowBlur = 2; // Reduced blur for performance
+                    const textX = Math.round(radius - 15);
+                    const textY = 0;
+                    offscreenCtx.fillText(name, textX, textY);
+                    offscreenCtx.restore();
+                });
+                offscreenCtx.restore();
+
+                ctx.imageSmoothingEnabled = false;
+            };
+
+            const updateNames = () => {
+                names = namesInput.value.split('\n').filter(name => name.trim() !== '');
+                const numSegments = names.length;
+                if (numSegments === 0) {
+                    return;
+                }
+                const canvasSize = Math.min(window.innerWidth * 0.7, 800, window.innerHeight * 0.85);
+                const radius = canvasSize / 2;
+                const fontSize = getDynamicFontSize(numSegments, radius);
+
+                if (!offscreenCanvas || offscreenCanvas.width !== canvasSize) {
+                    offscreenCanvas = document.createElement('canvas');
+                    offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: false });
+                }
+                offscreenCanvas.width = canvasSize;
+                offscreenCanvas.height = canvasSize;
+
+                const anglePerSegment = 2 * Math.PI / numSegments;
+                prerenderWheel(numSegments, radius, fontSize, anglePerSegment);
+                drawWheel();
+            };
+
             const shuffleNames = () => {
                 for (let i = names.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [names[i], names[j]] = [names[j], names[i]];
                 }
-                namesInput.value = names.join('\n'); drawWheel();
+                namesInput.value = names.join('\n');
+                updateNames();
             };
+
             const getDynamicFontSize = (numSegments, radius) => {
                 const maxFontSize = 40, minFontSize = 12;
                 const baseSize = radius / 7;
                 let fontSize = baseSize - (numSegments * 0.6);
                 return Math.max(minFontSize, Math.min(maxFontSize, fontSize));
             };
+
             const drawWheel = () => {
                 const numSegments = names.length;
                 if (numSegments === 0) {
                     ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
                     return;
                 }
-                const anglePerSegment = 2 * Math.PI / numSegments;
+
                 const canvasSize = Math.min(window.innerWidth * 0.7, 800, window.innerHeight * 0.85);
                 wheelCanvas.width = canvasSize;
-                wheelCanvas.height = canvasSize; confettiCanvas.width = canvasSize;
+                wheelCanvas.height = canvasSize;
+                confettiCanvas.width = canvasSize;
                 confettiCanvas.height = canvasSize;
+
                 const radius = wheelCanvas.width / 2;
-                const fontSize = getDynamicFontSize(numSegments, radius);
+
+                // Draw pre-rendered wheel with rotation
                 ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
                 ctx.save();
                 ctx.translate(radius, radius);
                 ctx.rotate(rotation);
-                names.forEach((name, i) => {
-                    const angle = i * anglePerSegment;
-                    ctx.beginPath();
-                    ctx.moveTo(0, 0);
-                    ctx.arc(0, 0, radius - 2, angle, angle + anglePerSegment);
-                    ctx.closePath();
-                    ctx.fillStyle = currentColors[i % currentColors.length];
-                    ctx.fill();
-                    const strokeStyle = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? "#1a1a1a" : "#ffffff";
-                    ctx.lineWidth = 3;
-                    ctx.strokeStyle = strokeStyle;
-                    ctx.stroke();
-                    ctx.save();
-                    ctx.rotate(angle + anglePerSegment / 2);
-                    ctx.fillStyle = "#fff";
-                    ctx.font = `bold ${fontSize}px Arial`;
-                    ctx.textAlign = "right";
-                    ctx.textBaseline = "middle";
-                    ctx.shadowColor = "black";
-                    ctx.shadowBlur = 4;
-                    ctx.fillText(name, radius - 15, 0);
-                    ctx.restore();
-                });
+                ctx.drawImage(offscreenCanvas, -radius, -radius);
                 ctx.restore();
+
+                // Draw pointer (static)
                 ctx.fillStyle = "#adb5bd";
                 ctx.beginPath();
-                ctx.moveTo(radius - 15, -5);
-                ctx.lineTo(radius + 15, -5);
-                ctx.lineTo(radius, 40);
-                ctx.closePath(); ctx.fill();
+                ctx.moveTo(radius - 15, 5);
+                ctx.lineTo(radius + 15, 5);
+                ctx.lineTo(radius, 45);
+                ctx.closePath();
+                ctx.fill();
                 ctx.strokeStyle = "black";
                 ctx.lineWidth = 1;
                 ctx.stroke();
             };
+
             const announceWinner = () => {
                 const anglePerSegment = 360 / names.length;
                 const totalDegrees = rotation * 180 / Math.PI;
@@ -340,22 +412,28 @@ Helen</textarea>
                 if (isSpinning) {
                     const elapsedTime = Date.now() - spinStartTime;
                     if (elapsedTime >= spinDuration) {
-                        isSpinning = false; rotation = startRotation + totalSpinAngle;
-                        drawWheel(); announceWinner();
+                        isSpinning = false;
+                        rotation = startRotation + totalSpinAngle;
+                        drawWheel();
+                        announceWinner();
                     } else {
                         const progress = elapsedTime / spinDuration;
                         const easedProgress = easeInOutQuint(progress);
-                        rotation = startRotation + totalSpinAngle * easedProgress; drawWheel();
+                        rotation = startRotation + totalSpinAngle * easedProgress;
+                        drawWheel();
                     }
+                } else {
+                    // Subtle idle rotation only when not spinning
+                    rotation += 0.0005;
+                    drawWheel();
                 }
-                else if (!isSpinning) {
-                    rotation += 0.0005; drawWheel();
-                }
-                updateConfetti(); requestAnimationFrame(animate);
+                updateConfetti();
+                requestAnimationFrame(animate);
             };
             const startSpin = () => {
                 if (isSpinning || names.length <= 1) return;
-                isSpinning = true; spinStartTime = Date.now();
+                isSpinning = true;
+                spinStartTime = Date.now();
                 startRotation = rotation;
                 const randomRotations = Math.floor(Math.random() * 10) + 15;
                 const randomFinalAngle = Math.random() * 2 * Math.PI;
@@ -366,8 +444,9 @@ Helen</textarea>
                     names.splice(lastWinnerIndex, 1);
                     namesInput.value = names.join('\n');
                     lastWinnerIndex = -1;
-                    drawWheel();
-                } winnerModal.hide();
+                    updateNames();
+                }
+                winnerModal.hide();
             };
 
             const updateListsDropdown = () => {
@@ -467,9 +546,10 @@ Helen</textarea>
                 if (themes[themeName]) {
                     currentColors = themes[themeName];
                     document.documentElement.setAttribute('data-bs-theme', themeName === 'light' ? 'light' : 'dark');
-                    drawWheel();
+                    updateNames(); // Trigger pre-render on theme change
                 }
             };
+
             function launchConfetti() {
                 confetti = [];
                 const count = 200;
