@@ -31,6 +31,8 @@ The primary motivation for creating SpinSelector was the need for a faster, offl
 3.  Click the wheel to spin!
 
 ## Changelog
+### 1.1.1 (December 31, 2025)
+- **Canvas Disappearance Bug:** Fixed a critical issue where the wheel content would vanish when zooming in/out or resizing the browser window. Added logic to re-render the offscreen canvas during resize events.
 
 ### 1.1.0 (September 25, 2025)
 - **Performance Improvements:** Enhanced spinning animation for large lists (30+ entries) by pre-rendering the wheel segments on an offscreen canvas, significantly reducing frame drops.

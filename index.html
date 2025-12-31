@@ -7,7 +7,7 @@
     <title>SpinSelector</title>
     <!--
     SpinSelector - A Standalone Random Name Picker Wheel
-    Version: 1.1.0
+    Version: 1.1.1
 
     Copyright (C) 2025 Hang Wong
 
@@ -166,7 +166,7 @@ Helen</textarea>
                         data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-body-secondary">Version 1.1.0</p>
+                    <p class="text-body-secondary">Version 1.1.1</p>
                     <p>&copy; 2025 Hang Wong.</p>
                     <p>This software is open-source and licensed under the <a
                             href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank"
@@ -261,15 +261,32 @@ Helen</textarea>
                 infoModal.show();
             };
 
+            const getDynamicFontSize = (numSegments, radius) => {
+                // Modified values to make font smaller than previous version but still readable
+                const maxFontSize = 50, minFontSize = 14;
+                const baseSize = radius / 6.5; 
+                let fontSize = baseSize - (numSegments * 0.5);
+                return Math.max(minFontSize, Math.min(maxFontSize, fontSize));
+            };
+
             const resizeCanvas = () => {
                 const canvasSize = Math.min(window.innerWidth * 0.7, 800, window.innerHeight * 0.85);
                 wheelCanvas.width = canvasSize;
                 wheelCanvas.height = canvasSize;
                 confettiCanvas.width = canvasSize;
                 confettiCanvas.height = canvasSize;
+
                 if (offscreenCanvas) {
                     offscreenCanvas.width = canvasSize;
                     offscreenCanvas.height = canvasSize;
+
+                    const radius = canvasSize / 2;
+                    const numSegments = names.length;
+                    if (numSegments > 0) {
+                        const fontSize = getDynamicFontSize(numSegments, radius);
+                        const anglePerSegment = 2 * Math.PI / numSegments;
+                        prerenderWheel(numSegments, radius, fontSize, anglePerSegment);
+                    }
                 }
                 drawWheel();
             };
@@ -313,8 +330,8 @@ Helen</textarea>
                     offscreenCtx.textAlign = "right";
                     offscreenCtx.textBaseline = "middle";
                     offscreenCtx.shadowColor = "black";
-                    offscreenCtx.shadowBlur = 2; // Reduced blur for performance
-                    const textX = Math.round(radius - 15);
+                    offscreenCtx.shadowBlur = 2;
+                    const textX = Math.round(radius - 10); // Slightly more padding
                     const textY = 0;
                     offscreenCtx.fillText(name, textX, textY);
                     offscreenCtx.restore();
@@ -353,13 +370,6 @@ Helen</textarea>
                 }
                 namesInput.value = names.join('\n');
                 updateNames();
-            };
-
-            const getDynamicFontSize = (numSegments, radius) => {
-                const maxFontSize = 40, minFontSize = 12;
-                const baseSize = radius / 7;
-                let fontSize = baseSize - (numSegments * 0.6);
-                return Math.max(minFontSize, Math.min(maxFontSize, fontSize));
             };
 
             const drawWheel = () => {
