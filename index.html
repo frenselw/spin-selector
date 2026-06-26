@@ -389,7 +389,7 @@
         }
 
         .controls-column {
-            max-width: 350px;
+            max-width: 100%;
         }
     </style>
 </head>
@@ -456,7 +456,7 @@ Helen</textarea>
         </div>
     </main>
 
-    <div class="modal fade" id="winnerModal" tabindex="-1">
+    <div class="modal fade" id="winnerModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header border-0">
@@ -474,7 +474,7 @@ Helen</textarea>
         </div>
     </div>
 
-    <div class="modal fade" id="infoModal" tabindex="-1">
+    <div class="modal fade" id="infoModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -489,7 +489,7 @@ Helen</textarea>
         </div>
     </div>
 
-    <div class="modal fade" id="aboutModal" tabindex="-1">
+    <div class="modal fade" id="aboutModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -536,6 +536,7 @@ Helen</textarea>
                     previousFocus = document.activeElement;
                     element.classList.add('show');
                     element.setAttribute('aria-modal', 'true');
+                    element.setAttribute('aria-hidden', 'false');
                     element.setAttribute('role', 'dialog');
                     (getFocusable(element)[0] || element).focus();
                 },
@@ -546,6 +547,7 @@ Helen</textarea>
             const hideModal = (element) => {
                 element.classList.remove('show');
                 element.removeAttribute('aria-modal');
+                element.setAttribute('aria-hidden', 'true');
                 element.removeAttribute('role');
                 if (previousFocus && document.contains(previousFocus)) {
                     previousFocus.focus();
@@ -940,7 +942,10 @@ Helen</textarea>
                 const listsJSON = localStorage.getItem('spinSelectorLists');
                 try {
                     savedLists = listsJSON ? JSON.parse(listsJSON) : {};
-                    if (!isValidListsObject(savedLists)) savedLists = {};
+                    if (!isValidListsObject(savedLists)) {
+                        savedLists = {};
+                        localStorage.removeItem('spinSelectorLists');
+                    }
                 } catch (error) {
                     savedLists = {};
                     localStorage.removeItem('spinSelectorLists');
