@@ -31,6 +31,15 @@ The primary motivation for creating SpinSelector was the need for a faster, offl
 3.  Click the wheel to spin!
 
 ## Changelog
+### 1.1.3 (June 26, 2026)
+- **Sharper Wheel Text:** Rendered the wheel on a HiDPI-aware canvas to reduce blurry names on high-density and zoomed displays.
+
+### 1.1.2 (June 26, 2026)
+- **Offline Support:** Removed CDN runtime dependencies so the standalone HTML file can initialize without internet access.
+- **Storage Resilience:** Added safeguards for corrupted saved-list data and invalid import files.
+- **Canvas Stability:** Fixed stale wheel rendering when entries are cleared and avoided resizing canvases on every animation frame.
+- **License Update:** Switched the project license to MIT and added the full license text.
+
 ### 1.1.1 (December 31, 2025)
 - **Canvas Disappearance Bug:** Fixed a critical issue where the wheel content would vanish when zooming in/out or resizing the browser window. Added logic to re-render the offscreen canvas during resize events.
 
@@ -41,4 +50,4 @@ The primary motivation for creating SpinSelector was the need for a faster, offl
 
 ## License
 
-This software is open-source, created by **Hang Wong**, and licensed under the **GNU Affero General Public License v3.0 (AGPLv3)**.
+This software is open-source, created by **Hang Wong**, and licensed under the **MIT License**.
