@@ -7,29 +7,362 @@
     <title>SpinSelector</title>
     <!--
     SpinSelector - A Standalone Random Name Picker Wheel
-    Version: 1.1.1
+    Version: 1.1.2
 
     Copyright (C) 2025 Hang Wong
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+    Licensed under the MIT License. See LICENSE for details.
 -->
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <style>
+        :root {
+            --bg: #111418;
+            --surface: #1b2026;
+            --surface-alt: #252b33;
+            --text: #f1f3f5;
+            --muted: #adb5bd;
+            --border: #3a424c;
+            --primary: #0d6efd;
+            --secondary: #6c757d;
+            --success: #198754;
+            --danger: #dc3545;
+            --info: #0dcaf0;
+        }
+
+        [data-bs-theme="light"] {
+            --bg: #f8f9fa;
+            --surface: #ffffff;
+            --surface-alt: #f1f3f5;
+            --text: #212529;
+            --muted: #6c757d;
+            --border: #ced4da;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
+            margin: 0;
             min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        h1,
+        h2,
+        h5,
+        p {
+            margin-top: 0;
+        }
+
+        a {
+            color: #6ea8fe;
+        }
+
+        .container-fluid {
+            width: 100%;
+            padding: 0 1rem;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .col-lg-8,
+        .col-lg-4 {
+            flex: 1 1 100%;
+        }
+
+        .d-flex {
+            display: flex;
+        }
+
+        .flex-column {
+            flex-direction: column;
+        }
+
+        .flex-grow-1 {
+            flex-grow: 1;
+        }
+
+        .justify-content-between {
+            justify-content: space-between;
+        }
+
+        .justify-content-center {
+            justify-content: center;
+        }
+
+        .align-items-center {
+            align-items: center;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .position-relative {
+            position: relative;
+        }
+
+        .position-absolute {
+            position: absolute;
+        }
+
+        .top-0 {
+            top: 0;
+        }
+
+        .start-0 {
+            left: 0;
+        }
+
+        .min-vh-100 {
+            min-height: 100vh;
+        }
+
+        .py-4 {
+            padding-top: 1.5rem;
+            padding-bottom: 1.5rem;
+        }
+
+        .mb-0 {
+            margin-bottom: 0;
+        }
+
+        .mb-2 {
+            margin-bottom: .5rem;
+        }
+
+        .mb-4 {
+            margin-bottom: 1.5rem;
+        }
+
+        .h3 {
+            font-size: 1.75rem;
+        }
+
+        .lead {
+            font-size: 1.25rem;
+        }
+
+        .display-4 {
+            font-size: clamp(2rem, 8vw, 3.5rem);
+            overflow-wrap: anywhere;
+        }
+
+        .text-body-secondary {
+            color: var(--muted);
+        }
+
+        .d-grid {
+            display: grid;
+        }
+
+        .gap-2 {
+            gap: .5rem;
+        }
+
+        .w-100 {
+            width: 100%;
+        }
+
+        .d-none {
+            display: none;
+        }
+
+        .input-group {
+            display: flex;
+        }
+
+        .input-group .form-control,
+        .input-group .form-select {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .form-control,
+        .form-select {
+            width: 100%;
+            padding: .5rem .75rem;
+            border: 1px solid var(--border);
+            border-radius: .375rem;
+            background: var(--surface);
+            color: var(--text);
+            font: inherit;
+        }
+
+        .input-group .form-control,
+        .input-group .form-select {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+
+        .input-group .btn {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: .5rem .75rem;
+            border: 1px solid transparent;
+            border-radius: .375rem;
+            color: #fff;
+            background: var(--secondary);
+            font: inherit;
+            line-height: 1.5;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .btn-sm {
+            padding: .25rem .5rem;
+            font-size: .875rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+
+        .btn-info {
+            background: var(--info);
+            color: #000;
+        }
+
+        .btn-outline-secondary {
+            background: transparent;
+            border-color: var(--secondary);
+            color: var(--muted);
+        }
+
+        .btn-close {
+            width: 2rem;
+            height: 2rem;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .btn-close::before {
+            content: "x";
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+
+        .dropdown {
+            position: relative;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            z-index: 20;
+            display: none;
+            margin: .25rem 0 0;
+            padding: .5rem 0;
+            list-style: none;
+            border: 1px solid var(--border);
+            border-radius: .375rem;
+            background: var(--surface);
+        }
+
+        .dropdown.show .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-item {
+            display: block;
+            padding: .5rem .75rem;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .dropdown-item:hover {
+            background: var(--surface-alt);
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(0, 0, 0, .55);
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-dialog {
+            width: min(100%, 500px);
+        }
+
+        .modal-content {
+            border: 1px solid var(--border);
+            border-radius: .5rem;
+            background: var(--surface);
+            color: var(--text);
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, .35);
+        }
+
+        .modal-header,
+        .modal-footer {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            padding: 1rem;
+        }
+
+        .modal-header {
+            justify-content: space-between;
+        }
+
+        .modal-footer {
+            justify-content: flex-end;
+        }
+
+        .modal-footer.justify-content-center {
+            justify-content: center;
+        }
+
+        .modal-body {
+            padding: 1rem;
+        }
+
+        .border-0 {
+            border: 0;
+        }
+
+        @media (min-width: 992px) {
+            .col-lg-8 {
+                flex: 1 1 0;
+                min-width: 0;
+            }
+
+            .col-lg-4 {
+                flex: 0 0 350px;
+            }
         }
 
         canvas {
@@ -55,10 +388,8 @@
             font-weight: 600;
         }
 
-        @media (min-width: 992px) {
-            .controls-column {
-                max-width: 350px;
-            }
+        .controls-column {
+            max-width: 350px;
         }
     </style>
 </head>
@@ -166,20 +497,15 @@ Helen</textarea>
                         data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-body-secondary">Version 1.1.1</p>
+                    <p class="text-body-secondary">Version 1.1.2</p>
                     <p>&copy; 2025 Hang Wong.</p>
-                    <p>This software is open-source and licensed under the <a
-                            href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank"
-                            rel="noopener noreferrer">GNU Affero General Public License v3.0</a>.</p>
+                    <p>This software is open-source and licensed under the <a href="LICENSE">MIT License</a>.</p>
                 </div>
                 <div class="modal-footer"><button type="button" class="btn btn-secondary"
                         data-bs-dismiss="modal">Close</button></div>
             </div>
         </div>
     </div>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -199,14 +525,123 @@ Helen</textarea>
             const importFileInput = document.getElementById('import-file-input');
             const aboutBtn = document.getElementById('about-btn');
 
-            const winnerModal = new bootstrap.Modal(document.getElementById('winnerModal'));
+            const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+            let previousFocus = null;
+
+            const getFocusable = (element) => [...element.querySelectorAll(focusableSelector)]
+                .filter(node => !node.disabled && node.offsetParent !== null);
+
+            const createModal = (element) => ({
+                show() {
+                    previousFocus = document.activeElement;
+                    element.classList.add('show');
+                    element.setAttribute('aria-modal', 'true');
+                    element.setAttribute('role', 'dialog');
+                    (getFocusable(element)[0] || element).focus();
+                },
+                hide() {
+                    hideModal(element);
+                }
+            });
+            const hideModal = (element) => {
+                element.classList.remove('show');
+                element.removeAttribute('aria-modal');
+                element.removeAttribute('role');
+                if (previousFocus && document.contains(previousFocus)) {
+                    previousFocus.focus();
+                    previousFocus = null;
+                }
+            };
+            const closeDropdowns = () => {
+                document.querySelectorAll('.dropdown.show').forEach(dropdown => {
+                    const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
+                    const shouldRestoreFocus = dropdown.contains(document.activeElement);
+                    dropdown.classList.remove('show');
+                    toggle?.setAttribute('aria-expanded', 'false');
+                    if (shouldRestoreFocus) toggle?.focus();
+                });
+            };
+
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal || e.target.closest('[data-bs-dismiss="modal"]')) {
+                        hideModal(modal);
+                    }
+                });
+            });
+
+            document.addEventListener('keydown', (e) => {
+                const activeModal = document.querySelector('.modal.show');
+                if (e.key === 'Escape') {
+                    closeDropdowns();
+                    if (activeModal) hideModal(activeModal);
+                }
+
+                if (e.key === 'Tab' && activeModal) {
+                    const focusable = getFocusable(activeModal);
+                    if (focusable.length === 0) {
+                        e.preventDefault();
+                        activeModal.focus();
+                        return;
+                    }
+                    const first = focusable[0];
+                    const last = focusable[focusable.length - 1];
+                    if (e.shiftKey && document.activeElement === first) {
+                        e.preventDefault();
+                        last.focus();
+                    } else if (!e.shiftKey && document.activeElement === last) {
+                        e.preventDefault();
+                        first.focus();
+                    }
+                }
+            });
+
+            document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(toggle => {
+                toggle.setAttribute('aria-expanded', 'false');
+                toggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const dropdown = toggle.closest('.dropdown');
+                    const shouldOpen = !dropdown.classList.contains('show');
+                    closeDropdowns();
+                    dropdown.classList.toggle('show', shouldOpen);
+                    toggle.setAttribute('aria-expanded', String(shouldOpen));
+                });
+
+                toggle.addEventListener('keydown', (e) => {
+                    if (e.key !== 'ArrowDown') return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const dropdown = toggle.closest('.dropdown');
+                    closeDropdowns();
+                    dropdown.classList.add('show');
+                    toggle.setAttribute('aria-expanded', 'true');
+                    dropdown.querySelector('.dropdown-item')?.focus();
+                });
+            });
+
+            document.querySelectorAll('.dropdown').forEach(dropdown => {
+                dropdown.addEventListener('keydown', (e) => {
+                    if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return;
+                    e.preventDefault();
+                    const items = [...dropdown.querySelectorAll('.dropdown-item')];
+                    const index = items.indexOf(document.activeElement);
+                    const next = e.key === 'ArrowDown'
+                        ? items[(index + 1) % items.length]
+                        : items[(index - 1 + items.length) % items.length];
+                    next?.focus();
+                });
+            });
+
+            document.addEventListener('click', closeDropdowns);
+
+            const winnerModal = createModal(document.getElementById('winnerModal'));
             const winnerNameElement = document.getElementById('winner-name');
             const removeWinnerBtn = document.getElementById('remove-winner-btn');
-            const infoModal = new bootstrap.Modal(document.getElementById('infoModal'));
+            const infoModal = createModal(document.getElementById('infoModal'));
             const infoModalTitle = document.getElementById('infoModalTitle');
             const infoModalBody = document.getElementById('infoModalBody');
             const infoModalFooter = document.getElementById('infoModalFooter');
-            const aboutModal = new bootstrap.Modal(document.getElementById('aboutModal'));
+            const aboutModal = createModal(document.getElementById('aboutModal'));
 
             const themes = {
                 dark: ["#0d6efd", "#854bcc", "#d63384", "#dc3545", "#fd7e14", "#ffc107", "#198754", "#20c997"],
@@ -252,8 +687,8 @@ Helen</textarea>
                         button.className = `btn ${btnConfig.class}`;
                         button.textContent = btnConfig.label;
                         button.onclick = () => {
-                            if (btnConfig.onClick) btnConfig.onClick();
                             infoModal.hide();
+                            if (btnConfig.onClick) btnConfig.onClick();
                         };
                         infoModalFooter.appendChild(button);
                     });
@@ -269,12 +704,19 @@ Helen</textarea>
                 return Math.max(minFontSize, Math.min(maxFontSize, fontSize));
             };
 
-            const resizeCanvas = () => {
-                const canvasSize = Math.min(window.innerWidth * 0.7, 800, window.innerHeight * 0.85);
+            const getCanvasSize = () => Math.min(window.innerWidth * 0.7, 800, window.innerHeight * 0.85);
+
+            const setCanvasSize = (canvasSize) => {
+                if (wheelCanvas.width === canvasSize && confettiCanvas.width === canvasSize) return;
                 wheelCanvas.width = canvasSize;
                 wheelCanvas.height = canvasSize;
                 confettiCanvas.width = canvasSize;
                 confettiCanvas.height = canvasSize;
+            };
+
+            const resizeCanvas = () => {
+                const canvasSize = getCanvasSize();
+                setCanvasSize(canvasSize);
 
                 if (offscreenCanvas) {
                     offscreenCanvas.width = canvasSize;
@@ -344,10 +786,19 @@ Helen</textarea>
             const updateNames = () => {
                 names = namesInput.value.split('\n').filter(name => name.trim() !== '');
                 const numSegments = names.length;
+                const canvasSize = getCanvasSize();
+                setCanvasSize(canvasSize);
+
                 if (numSegments === 0) {
+                    isSpinning = false;
+                    lastWinnerIndex = -1;
+                    confetti = [];
+                    if (offscreenCtx) {
+                        offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+                    }
+                    drawWheel();
                     return;
                 }
-                const canvasSize = Math.min(window.innerWidth * 0.7, 800, window.innerHeight * 0.85);
                 const radius = canvasSize / 2;
                 const fontSize = getDynamicFontSize(numSegments, radius);
 
@@ -376,14 +827,9 @@ Helen</textarea>
                 const numSegments = names.length;
                 if (numSegments === 0) {
                     ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+                    confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
                     return;
                 }
-
-                const canvasSize = Math.min(window.innerWidth * 0.7, 800, window.innerHeight * 0.85);
-                wheelCanvas.width = canvasSize;
-                wheelCanvas.height = canvasSize;
-                confettiCanvas.width = canvasSize;
-                confettiCanvas.height = canvasSize;
 
                 const radius = wheelCanvas.width / 2;
 
@@ -468,10 +914,22 @@ Helen</textarea>
                     savedListsDropdown.appendChild(option);
                 } savedListsDropdown.value = selectedValue;
             };
+            const isValidListsObject = (lists) => (
+                lists &&
+                typeof lists === 'object' &&
+                !Array.isArray(lists) &&
+                Object.entries(lists).every(([name, value]) => name.trim() && typeof value === 'string')
+            );
             const saveListsToStorage = () => localStorage.setItem('spinSelectorLists', JSON.stringify(savedLists));
             const loadListsFromStorage = () => {
                 const listsJSON = localStorage.getItem('spinSelectorLists');
-                savedLists = listsJSON ? JSON.parse(listsJSON) : {};
+                try {
+                    savedLists = listsJSON ? JSON.parse(listsJSON) : {};
+                    if (!isValidListsObject(savedLists)) savedLists = {};
+                } catch (error) {
+                    savedLists = {};
+                    localStorage.removeItem('spinSelectorLists');
+                }
                 updateListsDropdown();
             };
             const handleSaveList = () => {
@@ -488,7 +946,7 @@ Helen</textarea>
             };
             const handleLoadList = () => {
                 const listName = savedListsDropdown.value;
-                if (savedLists[listName]) {
+                if (Object.hasOwn(savedLists, listName)) {
                     namesInput.value = savedLists[listName];
                     listNameInput.value = listName;
                     updateNames();
@@ -496,7 +954,7 @@ Helen</textarea>
             };
             const handleDeleteList = () => {
                 const listName = savedListsDropdown.value;
-                if (savedLists[listName]) {
+                if (Object.hasOwn(savedLists, listName)) {
                     showModal('Confirm Deletion', `Are you sure you want to delete the list "${listName}"?`, [
                         {
                             label: 'Cancel',
@@ -539,6 +997,9 @@ Helen</textarea>
                 reader.onload = (e) => {
                     try {
                         const importedLists = JSON.parse(e.target.result);
+                        if (!isValidListsObject(importedLists)) {
+                            throw new Error('Invalid list file');
+                        }
                         savedLists = { ...savedLists, ...importedLists };
                         saveListsToStorage(); updateListsDropdown();
                         showModal('Success', 'Lists imported successfully!');
@@ -556,6 +1017,7 @@ Helen</textarea>
                 if (themes[themeName]) {
                     currentColors = themes[themeName];
                     document.documentElement.setAttribute('data-bs-theme', themeName === 'light' ? 'light' : 'dark');
+                    closeDropdowns();
                     updateNames(); // Trigger pre-render on theme change
                 }
             };
