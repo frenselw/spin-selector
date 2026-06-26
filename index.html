@@ -7,7 +7,7 @@
     <title>SpinSelector</title>
     <!--
     SpinSelector - A Standalone Random Name Picker Wheel
-    Version: 1.1.2
+    Version: 1.1.3
 
     Copyright (C) 2025 Hang Wong
 
@@ -497,7 +497,7 @@ Helen</textarea>
                         data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-body-secondary">Version 1.1.2</p>
+                    <p class="text-body-secondary">Version 1.1.3</p>
                     <p>&copy; 2025 Hang Wong.</p>
                     <p>This software is open-source and licensed under the <a href="LICENSE">MIT License</a>.</p>
                 </div>
@@ -660,6 +660,8 @@ Helen</textarea>
             let offscreenCanvas;
             let offscreenCtx;
             let resizeTimeout;
+            let canvasCssSize = 0;
+            let canvasScale = 1;
             let isSpinning = false;
             let spinStartTime = 0;
             let startRotation = 0;
@@ -704,14 +706,24 @@ Helen</textarea>
                 return Math.max(minFontSize, Math.min(maxFontSize, fontSize));
             };
 
-            const getCanvasSize = () => Math.min(window.innerWidth * 0.7, 800, window.innerHeight * 0.85);
+            const getCanvasSize = () => Math.floor(Math.min(window.innerWidth * 0.7, 800, window.innerHeight * 0.85));
 
             const setCanvasSize = (canvasSize) => {
-                if (wheelCanvas.width === canvasSize && confettiCanvas.width === canvasSize) return;
-                wheelCanvas.width = canvasSize;
-                wheelCanvas.height = canvasSize;
-                confettiCanvas.width = canvasSize;
-                confettiCanvas.height = canvasSize;
+                const scale = window.devicePixelRatio || 1;
+                const backingSize = Math.round(canvasSize * scale);
+                if (canvasCssSize === canvasSize && canvasScale === scale && wheelCanvas.width === backingSize) return;
+
+                canvasCssSize = canvasSize;
+                canvasScale = scale;
+
+                [wheelCanvas, confettiCanvas].forEach(canvas => {
+                    canvas.width = backingSize;
+                    canvas.height = backingSize;
+                    canvas.style.width = `${canvasSize}px`;
+                    canvas.style.height = `${canvasSize}px`;
+                });
+                ctx.setTransform(scale, 0, 0, scale, 0, 0);
+                confettiCtx.setTransform(scale, 0, 0, scale, 0, 0);
             };
 
             const resizeCanvas = () => {
@@ -719,8 +731,9 @@ Helen</textarea>
                 setCanvasSize(canvasSize);
 
                 if (offscreenCanvas) {
-                    offscreenCanvas.width = canvasSize;
-                    offscreenCanvas.height = canvasSize;
+                    offscreenCanvas.width = Math.round(canvasSize * canvasScale);
+                    offscreenCanvas.height = Math.round(canvasSize * canvasScale);
+                    offscreenCtx.setTransform(canvasScale, 0, 0, canvasScale, 0, 0);
 
                     const radius = canvasSize / 2;
                     const numSegments = names.length;
@@ -742,11 +755,11 @@ Helen</textarea>
 
             const prerenderWheel = (numSegments, radius, fontSize, anglePerSegment) => {
                 if (numSegments === 0) {
-                    offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+                    offscreenCtx.clearRect(0, 0, canvasCssSize, canvasCssSize);
                     return;
                 }
 
-                offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+                offscreenCtx.clearRect(0, 0, canvasCssSize, canvasCssSize);
                 offscreenCtx.save();
                 offscreenCtx.translate(radius, radius);
 
@@ -780,7 +793,7 @@ Helen</textarea>
                 });
                 offscreenCtx.restore();
 
-                ctx.imageSmoothingEnabled = false;
+                ctx.imageSmoothingEnabled = true;
             };
 
             const updateNames = () => {
@@ -794,7 +807,7 @@ Helen</textarea>
                     lastWinnerIndex = -1;
                     confetti = [];
                     if (offscreenCtx) {
-                        offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+                        offscreenCtx.clearRect(0, 0, canvasCssSize, canvasCssSize);
                     }
                     drawWheel();
                     return;
@@ -802,12 +815,14 @@ Helen</textarea>
                 const radius = canvasSize / 2;
                 const fontSize = getDynamicFontSize(numSegments, radius);
 
-                if (!offscreenCanvas || offscreenCanvas.width !== canvasSize) {
+                const backingSize = Math.round(canvasSize * canvasScale);
+                if (!offscreenCanvas || offscreenCanvas.width !== backingSize) {
                     offscreenCanvas = document.createElement('canvas');
                     offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: false });
                 }
-                offscreenCanvas.width = canvasSize;
-                offscreenCanvas.height = canvasSize;
+                offscreenCanvas.width = backingSize;
+                offscreenCanvas.height = backingSize;
+                offscreenCtx.setTransform(canvasScale, 0, 0, canvasScale, 0, 0);
 
                 const anglePerSegment = 2 * Math.PI / numSegments;
                 prerenderWheel(numSegments, radius, fontSize, anglePerSegment);
@@ -826,19 +841,19 @@ Helen</textarea>
             const drawWheel = () => {
                 const numSegments = names.length;
                 if (numSegments === 0) {
-                    ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
-                    confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+                    ctx.clearRect(0, 0, canvasCssSize, canvasCssSize);
+                    confettiCtx.clearRect(0, 0, canvasCssSize, canvasCssSize);
                     return;
                 }
 
-                const radius = wheelCanvas.width / 2;
+                const radius = canvasCssSize / 2;
 
                 // Draw pre-rendered wheel with rotation
-                ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+                ctx.clearRect(0, 0, canvasCssSize, canvasCssSize);
                 ctx.save();
                 ctx.translate(radius, radius);
                 ctx.rotate(rotation);
-                ctx.drawImage(offscreenCanvas, -radius, -radius);
+                ctx.drawImage(offscreenCanvas, -radius, -radius, canvasCssSize, canvasCssSize);
                 ctx.restore();
 
                 // Draw pointer (static)
@@ -1027,8 +1042,8 @@ Helen</textarea>
                 const count = 200;
                 for (let i = 0; i < count; i++) {
                     confetti.push({
-                        x: confettiCanvas.width / 2,
-                        y: confettiCanvas.height / 2,
+                        x: canvasCssSize / 2,
+                        y: canvasCssSize / 2,
                         color: currentColors[Math.floor(Math.random() * currentColors.length)],
                         size: Math.random() * 5 + 2,
                         speed: Math.random() * 10 + 5,
@@ -1037,7 +1052,7 @@ Helen</textarea>
                 }
             }
             function updateConfetti() {
-                confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+                confettiCtx.clearRect(0, 0, canvasCssSize, canvasCssSize);
                 for (let i = confetti.length - 1; i >= 0; i--) {
                     const p = confetti[i];
                     p.x += Math.cos(p.angle) * p.speed;

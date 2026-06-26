@@ -31,6 +31,9 @@ The primary motivation for creating SpinSelector was the need for a faster, offl
 3.  Click the wheel to spin!
 
 ## Changelog
+### 1.1.3 (June 26, 2026)
+- **Sharper Wheel Text:** Rendered the wheel on a HiDPI-aware canvas to reduce blurry names on high-density and zoomed displays.
+
 ### 1.1.2 (June 26, 2026)
 - **Offline Support:** Removed CDN runtime dependencies so the standalone HTML file can initialize without internet access.
 - **Storage Resilience:** Added safeguards for corrupted saved-list data and invalid import files.
