@@ -656,6 +656,7 @@ Helen</textarea>
                 light: ["#0077b6", "#00b4d8", "#90e0ef", "#ff7f51", "#ffb703", "#8338ec"]
             };
             let names = [];
+            let excludedNames = new Set();
             let currentColors = themes.dark;
             let savedLists = {};
             let rotation = 0;
@@ -670,6 +671,8 @@ Helen</textarea>
             let totalSpinAngle = 0;
             const spinDuration = 10000;
             let lastWinnerIndex = -1;
+            let pendingWinnerIndex = -1;
+            let spinAllowsExcluded = false;
             let confetti = [];
 
             const showModal = (title, body, buttons = []) => {
@@ -698,6 +701,47 @@ Helen</textarea>
                     });
                 }
                 infoModal.show();
+            };
+
+            const getEligibleIndices = () => names
+                .map((name, index) => excludedNames.has(name) ? -1 : index)
+                .filter(index => index !== -1);
+
+            const getExcludedNamesInEntries = () => {
+                const entryNames = new Set(namesInput.value.split('\n').filter(name => name.trim() !== ''));
+                return [...excludedNames].filter(name => entryNames.has(name));
+            };
+
+            const normalizeListRecord = (record) => {
+                if (typeof record === 'string') {
+                    return { entries: record, excluded: [] };
+                }
+                if (!record || typeof record !== 'object' || Array.isArray(record) ||
+                    typeof record.entries !== 'string') {
+                    return null;
+                }
+                const excluded = record.excluded ?? [];
+                if (!Array.isArray(excluded) || !excluded.every(name => typeof name === 'string')) {
+                    return null;
+                }
+                return { entries: record.entries, excluded: [...new Set(excluded)] };
+            };
+
+            const normalizeListsData = (data) => {
+                const lists = data && typeof data === 'object' && !Array.isArray(data) &&
+                    data.version === 2 && data.lists !== undefined
+                    ? data.lists
+                    : data;
+                if (!lists || typeof lists !== 'object' || Array.isArray(lists)) return null;
+
+                const normalizedLists = {};
+                for (const [listName, record] of Object.entries(lists)) {
+                    if (!listName.trim()) return null;
+                    const normalizedRecord = normalizeListRecord(record);
+                    if (!normalizedRecord) return null;
+                    normalizedLists[listName] = normalizedRecord;
+                }
+                return normalizedLists;
             };
 
             const getDynamicFontSize = (numSegments, radius) => {
@@ -807,6 +851,7 @@ Helen</textarea>
                 if (numSegments === 0) {
                     isSpinning = false;
                     lastWinnerIndex = -1;
+                    pendingWinnerIndex = -1;
                     confetti = [];
                     if (offscreenCtx) {
                         offscreenCtx.clearRect(0, 0, canvasCssSize, canvasCssSize);
@@ -872,11 +917,15 @@ Helen</textarea>
             };
 
             const announceWinner = () => {
-                const anglePerSegment = 360 / names.length;
-                const totalDegrees = rotation * 180 / Math.PI;
-                const effectiveAngle = (270 - totalDegrees) % 360;
-                const normalizedAngle = (effectiveAngle + 360) % 360;
-                lastWinnerIndex = Math.floor(normalizedAngle / anglePerSegment);
+                const winnerIndex = pendingWinnerIndex;
+                const invalidWinner = winnerIndex < 0 || winnerIndex >= names.length ||
+                    (!spinAllowsExcluded && excludedNames.has(names[winnerIndex]));
+                pendingWinnerIndex = -1;
+                spinAllowsExcluded = false;
+                if (invalidWinner) {
+                    return;
+                }
+                lastWinnerIndex = winnerIndex;
                 winnerNameElement.textContent = names[lastWinnerIndex];
                 winnerModal.show(); launchConfetti();
             };
@@ -904,13 +953,28 @@ Helen</textarea>
                 requestAnimationFrame(animate);
             };
             const startSpin = () => {
-                if (isSpinning || names.length <= 1) return;
+                const eligibleIndices = getEligibleIndices();
+                const fallbackToExcluded = eligibleIndices.length === 0;
+                const spinIndices = !fallbackToExcluded
+                    ? eligibleIndices
+                    : names.map((entryName, index) => index);
+                if (isSpinning || spinIndices.length === 0) return;
+
                 isSpinning = true;
                 spinStartTime = Date.now();
                 startRotation = rotation;
+                lastWinnerIndex = -1;
+                spinAllowsExcluded = fallbackToExcluded;
+                pendingWinnerIndex = spinIndices[Math.floor(Math.random() * spinIndices.length)];
+
+                const fullRotation = 2 * Math.PI;
+                const anglePerSegment = fullRotation / names.length;
+                const targetAngle = (pendingWinnerIndex + 0.5) * anglePerSegment;
+                const targetRotation = (1.5 * Math.PI - targetAngle + fullRotation) % fullRotation;
+                const currentRotation = ((startRotation % fullRotation) + fullRotation) % fullRotation;
+                const rotationDelta = (targetRotation - currentRotation + fullRotation) % fullRotation;
                 const randomRotations = Math.floor(Math.random() * 10) + 15;
-                const randomFinalAngle = Math.random() * 2 * Math.PI;
-                totalSpinAngle = (randomRotations * 2 * Math.PI) + randomFinalAngle;
+                totalSpinAngle = (randomRotations * fullRotation) + rotationDelta;
             };
             const handleRemoveWinner = () => {
                 if (lastWinnerIndex > -1) {
@@ -931,20 +995,19 @@ Helen</textarea>
                     savedListsDropdown.appendChild(option);
                 } savedListsDropdown.value = selectedValue;
             };
-            const isValidListsObject = (lists) => (
-                lists &&
-                typeof lists === 'object' &&
-                !Array.isArray(lists) &&
-                Object.entries(lists).every(([name, value]) => name.trim() && typeof value === 'string')
-            );
-            const saveListsToStorage = () => localStorage.setItem('spinSelectorLists', JSON.stringify(savedLists));
+            const saveListsToStorage = () => localStorage.setItem('spinSelectorLists', JSON.stringify({
+                version: 2,
+                lists: savedLists
+            }));
             const loadListsFromStorage = () => {
                 const listsJSON = localStorage.getItem('spinSelectorLists');
                 try {
-                    savedLists = listsJSON ? JSON.parse(listsJSON) : {};
-                    if (!isValidListsObject(savedLists)) {
+                    const normalizedLists = listsJSON ? normalizeListsData(JSON.parse(listsJSON)) : {};
+                    if (!normalizedLists) {
                         savedLists = {};
                         localStorage.removeItem('spinSelectorLists');
+                    } else {
+                        savedLists = normalizedLists;
                     }
                 } catch (error) {
                     savedLists = {};
@@ -958,8 +1021,12 @@ Helen</textarea>
                     showModal('Save Error', 'Please enter a name for the list.');
                     return;
                 }
-                const namesToSave = namesInput.value;
-                savedLists[listName] = namesToSave;
+                const listRecord = {
+                    entries: namesInput.value,
+                    excluded: getExcludedNamesInEntries()
+                };
+                excludedNames = new Set(listRecord.excluded);
+                savedLists[listName] = listRecord;
                 saveListsToStorage(); updateListsDropdown();
                 savedListsDropdown.value = listName;
                 showModal('Success', `List "${listName}" saved!`);
@@ -967,7 +1034,9 @@ Helen</textarea>
             const handleLoadList = () => {
                 const listName = savedListsDropdown.value;
                 if (Object.hasOwn(savedLists, listName)) {
-                    namesInput.value = savedLists[listName];
+                    const listRecord = savedLists[listName];
+                    namesInput.value = listRecord.entries;
+                    excludedNames = new Set(listRecord.excluded);
                     listNameInput.value = listName;
                     updateNames();
                 }
@@ -1002,7 +1071,10 @@ Helen</textarea>
                     showModal('Export Error', 'There are no saved lists to export.');
                     return;
                 }
-                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(savedLists));
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+                    version: 2,
+                    lists: savedLists
+                }));
                 const downloadAnchorNode = document.createElement('a');
                 downloadAnchorNode.setAttribute("href", dataStr);
                 downloadAnchorNode.setAttribute("download", "spinselector_lists.json");
@@ -1016,8 +1088,8 @@ Helen</textarea>
                 if (!file) return; const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
-                        const importedLists = JSON.parse(e.target.result);
-                        if (!isValidListsObject(importedLists)) {
+                        const importedLists = normalizeListsData(JSON.parse(e.target.result));
+                        if (!importedLists) {
                             throw new Error('Invalid list file');
                         }
                         savedLists = { ...savedLists, ...importedLists };

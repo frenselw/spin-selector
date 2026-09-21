@@ -30,6 +30,24 @@ The primary motivation for creating SpinSelector was the need for a faster, offl
 2.  Type your items into the "Entries" text box, with each item on a new line.
 3.  Click the wheel to spin!
 
+### Hidden Exclusions
+
+Lists can contain hidden exclusions that remain visible on the wheel but can never be selected. Add them to an import file using the version 2 format:
+
+```json
+{
+    "version": 2,
+    "lists": {
+        "Class A": {
+            "entries": "Alice\nBob\nCharlie\nDiana",
+            "excluded": ["Bob", "Diana"]
+        }
+    }
+}
+```
+
+The `excluded` values must exactly match the entry text. They are skipped while any non-excluded entry remains. After all non-excluded entries have been removed, the remaining entries become selectable so the wheel continues to behave normally. Older files using `"List name": "entry\nentry"` remain supported and have no exclusions.
+
 ## Changelog
 ### 1.1.3 (June 26, 2026)
 - **Sharper Wheel Text:** Rendered the wheel on a HiDPI-aware canvas to reduce blurry names on high-density and zoomed displays.
