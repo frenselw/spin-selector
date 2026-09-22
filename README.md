@@ -49,6 +49,11 @@ Lists can contain hidden exclusions that remain visible on the wheel but can nev
 The `excluded` values must exactly match the entry text. They are skipped while any non-excluded entry remains. After all non-excluded entries have been removed, the remaining entries become selectable so the wheel continues to behave normally. Older files using `"List name": "entry\nentry"` remain supported and have no exclusions.
 
 ## Changelog
+### 1.1.4 (September 22, 2026)
+- **Hidden Exclusions:** Added version 2 JSON list data with hidden exclusions that remain visible on the wheel but are skipped during selection.
+- **Fallback Selection:** Once all non-excluded entries have been removed, the remaining excluded entries become selectable so the wheel remains usable without revealing the exclusions.
+- **Legacy Compatibility:** Existing list files using the original plain-text format remain supported.
+
 ### 1.1.3 (June 26, 2026)
 - **Sharper Wheel Text:** Rendered the wheel on a HiDPI-aware canvas to reduce blurry names on high-density and zoomed displays.
 
