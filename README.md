@@ -1,6 +1,6 @@
 # SpinSelector
 
-SpinSelector is a simple, powerful, and portable standalone web application for making random selections. It's perfect for teachers choosing students, teams making decisions, or anyone needing a fun and fair way to pick from a list.
+SpinSelector is a portable standalone web application for picking entries from a spinning wheel. It can be used for classroom activities, team decisions, and other list-based selections.
 
 The entire application runs in a single HTML file with no backend or installation required, making it incredibly portable and easy to use.
 
@@ -19,7 +19,7 @@ The primary motivation for creating SpinSelector was the need for a faster, offl
 - **Customizable Themes:** Choose from multiple color themes to personalize your experience.
 - **List Management:**
     - Save multiple lists directly in your browser.
-    - Load any saved list with a single click.
+    - Select a saved list to load it, or use **Load** to restore the selected saved version.
 - **Full Portability:**
     - Export all your saved lists to a single file.
     - Import lists on any other computer, making the app and your data truly portable.
@@ -29,16 +29,21 @@ The primary motivation for creating SpinSelector was the need for a faster, offl
 1.  Open the `index.html` file in any modern web browser.
 2.  Type your items into the "Entries" text box, with each item on a new line.
 3.  Click the wheel to spin. You can also focus the wheel with Tab and press Enter or Space.
+4.  In the result dialog, close it to keep the entry or choose **Remove Winner** to remove the selected entry from the current wheel.
 
 Wheel labels always show the complete entry, aligned near the outer rim. Each label scales to fit its segment, so longer names use smaller text instead of ellipses or truncation. Labels use black text across all themes; darker segment colors are lightened to maintain readable contrast. The pointer sits at the rim to keep the names clear.
 
-Use **Load** to reload the selected saved list after editing it. Importing lists asks how to handle existing names; **Undo Last Import** restores the previous saved lists until the next saved-list change or page reload.
+To save a list, enter a name under **Manage Lists** and click **Save**. Changes to entries, shuffling, and removing winners are not saved automatically. Saving under an existing name replaces that saved list; using a new name creates another saved list. Selecting a saved list loads it immediately; **Load** reloads its saved version and discards unsaved edits to the current wheel.
+
+**Export Lists to File** exports all saved lists to `spinselector_lists.json`. Save current edits first if you want them included. Browser-saved lists are local to the browser; use exported JSON files to back them up or move them to another browser or computer.
+
+After importing, select a saved list to load it onto the wheel. If imported list names already exist, choose **Keep Existing**, **Replace Existing**, or **Cancel**. **Undo Last Import** restores the previous saved lists until the next saved-list change or page reload.
 
 If saved data is damaged, the app preserves the original data and loads any valid lists it can recover. **Recover Saved Lists** lets you download the untouched source before explicitly replacing it with the recovered lists. Storage errors leave the previous saved lists unchanged and do not prevent ordinary wheel use.
 
 ### Hidden Exclusions
 
-Lists can contain hidden exclusions that remain visible on the wheel but can never be selected. Add them to an import file using the version 2 format:
+Lists can contain hidden exclusions. Their entries remain visible on the wheel and are skipped while any non-excluded entry remains. Add them to an import file using the version 2 format:
 
 ```json
 {
@@ -62,6 +67,8 @@ These settings are configured only by manually editing the imported JSON file. E
 - **Data Protection:** Preserve damaged source data, handle storage failures without partial changes, and support special list names safely.
 - **List Management:** Confirm import conflicts, allow undoing an import, and add an explicit Load button.
 - **Accessibility and Display:** Add keyboard-friendly controls and dialog labels, improve text contrast and long labels, and keep wheel and confetti canvases aligned at all sizes.
+- **Wheel Labels:** Show complete names near the outer rim, scale longer names to fit, and use consistent black text with adjusted segment colors across all eight themes.
+- **Spin Control:** Use the wheel itself for mouse and keyboard activation, without a separate Spin button below it.
 - **Hidden Exclusions:** Preserve the JSON-only configuration, exact matching, fallback behavior, and absence of interface indicators.
 
 ### 1.1.4 (September 22, 2026)
