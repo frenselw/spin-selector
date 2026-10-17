@@ -28,7 +28,9 @@ The primary motivation for creating SpinSelector was the need for a faster, offl
 
 1.  Open the `index.html` file in any modern web browser.
 2.  Type your items into the "Entries" text box, with each item on a new line.
-3.  Click the wheel or the **Spin** button to spin. The button also works with Enter or Space.
+3.  Click the wheel to spin. You can also focus the wheel with Tab and press Enter or Space.
+
+Wheel labels always show the complete entry. Each label scales to fit its segment, so longer names use smaller text instead of ellipses or truncation.
 
 Use **Load** to reload the selected saved list after editing it. Importing lists asks how to handle existing names; **Undo Last Import** restores the previous saved lists until the next saved-list change or page reload.
 

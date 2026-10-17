@@ -429,10 +429,9 @@
         <div class="row justify-content-center align-items-center">
             <div class="col-lg-8 text-center" id="wheel-column">
                 <div class="wheel-stage" id="wheel-stage">
-                    <canvas id="wheel" role="img" aria-label="Selection wheel. Use the Spin button to choose an entry."></canvas>
+                    <canvas id="wheel" role="button" tabindex="0" aria-label="Spin the wheel"></canvas>
                     <canvas id="confetti-canvas" aria-hidden="true"></canvas>
                 </div>
-                <button class="btn btn-primary" id="spin-btn">Spin</button>
             </div>
             <div class="col-lg-4 controls-column">
                 <div class="mb-4">
@@ -650,7 +649,6 @@ Helen</textarea>
             const ctx = wheelCanvas.getContext('2d');
             const confettiCanvas = document.getElementById('confetti-canvas');
             const confettiCtx = confettiCanvas.getContext('2d');
-            const spinButton = document.getElementById('spin-btn');
             const shuffleButton = document.getElementById('shuffle');
             const namesInput = document.getElementById('names');
             const themeSelector = document.getElementById('theme-selector');
@@ -698,7 +696,7 @@ Helen</textarea>
                 } else {
                     main.inert = false;
                     if (previousFocus && !previousFocus.disabled && previousFocus.offsetParent !== null) previousFocus.focus();
-                    else spinButton.focus();
+                    else wheelCanvas.focus();
                 }
             };
             const createModal = element => ({
@@ -838,8 +836,7 @@ Helen</textarea>
                 importListsBtn.disabled = isSpinning || importInProgress;
                 savedListsDropdown.disabled = isSpinning || !Object.keys(store.lists).length;
                 loadListBtn.disabled = deleteListBtn.disabled = isSpinning || !selected;
-                spinButton.disabled = isSpinning || importInProgress || !names.length;
-                wheelCanvas.setAttribute('aria-disabled', String(spinButton.disabled));
+                wheelCanvas.setAttribute('aria-disabled', String(isSpinning || importInProgress || !names.length));
                 undoImportBtn.disabled = isSpinning;
                 undoImportBtn.classList.toggle('d-none', !undoImport);
                 recoveryBtn.disabled = isSpinning;
@@ -908,17 +905,26 @@ Helen</textarea>
                 const luminance = channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;
                 return (luminance + .05) / .05 >= 1.05 / (luminance + .05) ? '#000000' : '#ffffff';
             };
-            const fitLabel = (text, width) => {
-                if (offscreenCtx.measureText(text).width <= width) return text;
-                const characters = Array.from(text);
-                let low = 0;
-                let high = characters.length;
-                while (low < high) {
-                    const mid = Math.ceil((low + high) / 2);
-                    if (offscreenCtx.measureText(characters.slice(0, mid).join('') + '…').width <= width) low = mid;
-                    else high = mid - 1;
+            const drawFullLabel = (name, angle, outerText, fontSize) => {
+                offscreenCtx.font = `bold ${fontSize}px Arial`;
+                offscreenCtx.textAlign = 'right';
+                offscreenCtx.textBaseline = 'middle';
+                const metrics = offscreenCtx.measureText(name);
+                const left = Math.max(metrics.width, metrics.actualBoundingBoxLeft || 0);
+                const right = Math.max(0, metrics.actualBoundingBoxRight || 0);
+                const height = Math.max(Math.abs(metrics.actualBoundingBoxAscent || fontSize), Math.abs(metrics.actualBoundingBoxDescent || fontSize / 2));
+                const innerPadding = Math.min(12, outerText * .1);
+                let scale = Math.min(1, (outerText - innerPadding) / Math.max(left + right, 1));
+                if (angle < Math.PI) {
+                    const tangent = Math.tan(angle / 2);
+                    const gap = Math.min(2, outerText * Math.sin(angle / 2) * .1);
+                    scale = Math.min(scale, (outerText - gap / tangent) / Math.max(left + right + height / tangent, 1));
                 }
-                return offscreenCtx.measureText('…').width <= width ? characters.slice(0, low).join('') + '…' : '';
+                // Fit the complete glyph bounds, including the narrow inner end of a segment.
+                // Scaling the measured glyphs keeps the geometry exact without truncating text.
+                offscreenCtx.translate(outerText - right * scale, 0);
+                offscreenCtx.scale(scale, scale);
+                offscreenCtx.fillText(name, 0, 0);
             };
             const setCanvasSize = () => {
                 const size = Math.max(1, Math.floor(Math.min(wheelColumn.clientWidth, 800, window.innerHeight * .85)));
@@ -938,11 +944,8 @@ Helen</textarea>
                 if (!names.length) return;
                 const radius = canvasCssSize / 2;
                 const angle = fullRotation / names.length;
-                const outerText = Math.max(1, radius - Math.min(58, radius * .3));
-                const fontSize = Math.max(8, Math.min(50, radius / 6.5 - names.length * .5, angle * outerText * .7));
-                const innerText = angle >= Math.PI ? Math.min(24, outerText / 4)
-                    : Math.min(outerText, Math.max(24, fontSize / (2 * Math.tan(angle / 2)) + 4));
-                const labelWidth = Math.max(0, outerText - innerText);
+                const outerText = Math.max(1, radius - Math.min(45, canvasCssSize * .2) - Math.min(10, radius * .1));
+                const fontSize = Math.min(50, Math.max(1, radius / 6.5));
                 const segmentPath = index => {
                     offscreenCtx.beginPath();
                     offscreenCtx.moveTo(0, 0);
@@ -965,10 +968,7 @@ Helen</textarea>
                     offscreenCtx.clip();
                     offscreenCtx.rotate((index + .5) * angle);
                     offscreenCtx.fillStyle = textColor(currentColors[index % currentColors.length]);
-                    offscreenCtx.font = `bold ${fontSize}px Arial`;
-                    offscreenCtx.textAlign = 'right';
-                    offscreenCtx.textBaseline = 'middle';
-                    offscreenCtx.fillText(fitLabel(name, labelWidth), outerText, 0);
+                    drawFullLabel(name, angle, outerText, fontSize);
                     offscreenCtx.restore();
                 });
                 offscreenCtx.restore();
@@ -1175,8 +1175,13 @@ Helen</textarea>
             };
 
             namesInput.addEventListener('input', updateNames);
-            spinButton.addEventListener('click', startSpin);
             wheelCanvas.addEventListener('click', startSpin);
+            wheelCanvas.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    if (!event.repeat) startSpin();
+                }
+            });
             shuffleButton.addEventListener('click', () => {
                 if (isSpinning) return;
                 for (let index = names.length - 1; index > 0; index--) {

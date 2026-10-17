@@ -33,7 +33,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright')
         await page.reload();
         await page.locator('#saved-lists-dropdown').selectOption('Offline');
         assert.equal(await page.locator('#names').inputValue(), 'Alice\nBob\nCharlie');
-        await page.locator('#spin-btn').focus();
+        await page.locator('#wheel').focus();
         const started = Date.now();
         await page.keyboard.press('Enter');
         await page.locator('#winnerModal').waitFor({ state: 'visible', timeout: 15000 });

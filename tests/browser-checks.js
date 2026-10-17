@@ -32,7 +32,22 @@ async (page) => {
         };
         const fillText = CanvasRenderingContext2D.prototype.fillText;
         CanvasRenderingContext2D.prototype.fillText = function (text, x, y) {
-            if (!this.canvas.id) window.wheelLabels.push({ text, x, width: this.measureText(text).width, color: this.fillStyle });
+            if (!this.canvas.id) {
+                const metrics = this.measureText(text);
+                const matrix = this.getTransform();
+                const scale = Math.hypot(matrix.a, matrix.b) / devicePixelRatio;
+                const corners = [
+                    [x - metrics.actualBoundingBoxLeft, y - metrics.actualBoundingBoxAscent],
+                    [x + metrics.actualBoundingBoxRight, y - metrics.actualBoundingBoxAscent],
+                    [x - metrics.actualBoundingBoxLeft, y + metrics.actualBoundingBoxDescent],
+                    [x + metrics.actualBoundingBoxRight, y + metrics.actualBoundingBoxDescent]
+                ].map(([cx, cy]) => ({
+                    x: (matrix.a * cx + matrix.c * cy + matrix.e) / devicePixelRatio,
+                    y: (matrix.b * cx + matrix.d * cy + matrix.f) / devicePixelRatio
+                }));
+                window.wheelLabels.push({ text, width: metrics.width * scale, color: this.fillStyle,
+                    fontSize: parseFloat(this.font.replace('bold ', '')) * scale, corners });
+            }
             return fillText.apply(this, arguments);
         };
         if (location.search.includes('test-storage=blocked')) {
@@ -75,9 +90,11 @@ async (page) => {
     const classRecord = { entries: 'Alice\nBob\nCharlie', excluded: ['Alice', 'Charlie'] };
 
     await seed({ Class: classRecord, Other: { entries: 'Other', excluded: [] } });
+    check('The wheel is the keyboard control without a separate Spin button', await page.locator('#spin-btn').count() === 0
+        && await page.getByRole('button', { name: 'Spin the wheel', exact: true }).count() === 1);
     check('Undo is hidden before any import', await page.locator('#undo-import-btn').isHidden());
     await page.locator('#saved-lists-dropdown').selectOption('Class');
-    await page.locator('#spin-btn').focus();
+    await page.locator('#wheel').focus();
     await page.keyboard.press('Enter');
     check('F01: mutation controls lock during a keyboard-started spin', await page.evaluate(() =>
         ['names', 'shuffle', 'saved-lists-dropdown', 'load-list-btn', 'save-list-btn', 'delete-list-btn', 'import-lists-btn']
@@ -98,7 +115,7 @@ async (page) => {
     check('F09: result stays fixed while the dialog is open', await page.evaluate(() => window.wheelAngle) === resultAngle);
     await page.locator('#remove-winner-btn').click();
     check('Remove Winner removes exactly the selected entry', await page.locator('#names').inputValue() === 'Alice\nCharlie');
-    await page.locator('#spin-btn').focus();
+    await page.locator('#wheel').focus();
     await page.keyboard.press('Space');
     await finishSpin();
     check('hidden settings: fallback remains usable', await page.locator('#winner-name').textContent() === 'Alice');
@@ -177,7 +194,7 @@ async (page) => {
     await close();
     await page.evaluate(() => window.FileReader = window.realFileReader);
 
-    await page.locator('#spin-btn').click();
+    await page.locator('#wheel').click();
     await page.locator('#about-btn').click();
     await page.evaluate(() => window.testNow += 10010);
     await page.waitForTimeout(100);
@@ -225,8 +242,36 @@ async (page) => {
     await page.locator('[data-theme="pastel"]').click();
     const labels = await page.evaluate(() => window.wheelLabels);
     check('F10: pale segments use dark text', labels.length > 0 && labels.every(label => label.color === '#000000'), labels);
-    check('F13: long labels shorten visually and retain pointer clearance', labels.some(label => label.text.endsWith('…')) && labels.every(label => label.width <= label.x && label.x <= 765 / 2 - 45), labels);
+    check('F13: long labels draw the complete original strings', labels[0].text === 'ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEFGHIJKLMNOPQRSTUVWXYZ' && labels[1].text === 'Bob', labels);
     check('F13: full source names remain intact', (await page.locator('#names').inputValue()).startsWith('ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEFGHIJKLMNOPQRSTUVWXYZ'));
+    const chineseClass = Array.from({ length: 34 }, (_, index) => ['陳小明', '李詠詩', '張嘉欣', '黃俊傑'][index % 4])
+        .concat(['歐陽曉晴與一個特別長但必須完整顯示的姓名', 'Alexandria Catherine Montgomery-Wellington']);
+    for (const [width, height] of [[390, 844], [1024, 900], [1600, 900]]) {
+        await page.setViewportSize({ width, height });
+        await page.waitForTimeout(150);
+        for (const entries of [chineseClass, ['A very long name '.repeat(15)], ['王小明', '李嘉欣']]) {
+            await page.evaluate(() => window.wheelLabels = []);
+            await page.locator('#names').fill(entries.join('\n'));
+            const rendered = await page.evaluate(count => ({
+                labels: window.wheelLabels.slice(-count), size: document.querySelector('#wheel-stage').clientWidth
+            }), entries.length);
+            check(`F13: all ${entries.length} full names fit at ${width}px`, rendered.labels.length === entries.length && rendered.labels.every((label, index) => {
+                if (label.text !== entries[index] || label.fontSize <= 0) return false;
+                const radius = rendered.size / 2;
+                const limit = radius - Math.min(45, rendered.size * .2) - 2;
+                const angle = 2 * Math.PI / entries.length;
+                const middle = (index + .5) * angle;
+                return label.corners.every(point => {
+                    const x = point.x - radius;
+                    const y = point.y - radius;
+                    const difference = Math.atan2(Math.sin(Math.atan2(y, x) - middle), Math.cos(Math.atan2(y, x) - middle));
+                    return Math.hypot(x, y) <= limit + .01 && Math.abs(difference) <= angle / 2 + .00001;
+                });
+            }), rendered);
+            if (entries.length === chineseClass.length) check(`F13: long names shrink individually at ${width}px`,
+                rendered.labels[34].fontSize < rendered.labels[0].fontSize && rendered.labels[35].fontSize < rendered.labels[0].fontSize, rendered.labels.map(label => label.fontSize));
+        }
+    }
 
     await page.evaluate(() => localStorage.setItem('spinSelectorLists', '{"good":"a","bad":123}'));
     await page.reload();
@@ -266,8 +311,8 @@ async (page) => {
     check('F03: Delete failure retains the original list', await page.locator('#infoModalTitle').textContent() === 'Storage Error' && (await stored()).Single.entries === 'Alice');
     await close();
     await page.goto(base + '?test-storage=blocked');
-    check('F03: blocked storage does not prevent wheel initialization', await page.evaluate(() => document.querySelector('#wheel').width > 300 && !document.querySelector('#spin-btn').disabled));
-    await page.locator('#spin-btn').click();
+    check('F03: blocked storage does not prevent wheel initialization', await page.evaluate(() => document.querySelector('#wheel').width > 300 && document.querySelector('#wheel').getAttribute('aria-disabled') === 'false'));
+    await page.locator('#wheel').click();
     await finishSpin();
     check('F03: ordinary selection still works with blocked storage', (await page.locator('#winner-name').textContent()).length > 0);
     await close();
