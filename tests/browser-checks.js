@@ -258,10 +258,11 @@ async (page) => {
             check(`F13: all ${entries.length} full names fit at ${width}px`, rendered.labels.length === entries.length && rendered.labels.every((label, index) => {
                 if (label.text !== entries[index] || label.fontSize <= 0) return false;
                 const radius = rendered.size / 2;
-                const limit = radius - Math.min(45, rendered.size * .2) - 2;
+                const limit = radius - 8;
                 const angle = 2 * Math.PI / entries.length;
                 const middle = (index + .5) * angle;
-                return label.corners.every(point => {
+                const reachesRim = Math.max(...label.corners.map(point => Math.hypot(point.x - radius, point.y - radius))) >= radius - 16;
+                return reachesRim && label.corners.every(point => {
                     const x = point.x - radius;
                     const y = point.y - radius;
                     const difference = Math.atan2(Math.sin(Math.atan2(y, x) - middle), Math.cos(Math.atan2(y, x) - middle));
@@ -272,6 +273,11 @@ async (page) => {
                 rendered.labels[34].fontSize < rendered.labels[0].fontSize && rendered.labels[35].fontSize < rendered.labels[0].fontSize, rendered.labels.map(label => label.fontSize));
         }
     }
+    check('The rim pointer stays clear of the edge-aligned names', await page.evaluate(() => {
+        const wheel = document.querySelector('#wheel').getBoundingClientRect();
+        const pointer = document.querySelector('#wheel-pointer').getBoundingClientRect();
+        return pointer.bottom - wheel.top <= 6.1 && Math.abs(pointer.x + pointer.width / 2 - wheel.x - wheel.width / 2) < .1;
+    }));
 
     await page.evaluate(() => localStorage.setItem('spinSelectorLists', '{"good":"a","bad":123}'));
     await page.reload();
@@ -323,6 +329,11 @@ async (page) => {
     check('F03: restored access cannot overwrite previously unread saved data', await page.locator('#infoModalTitle').textContent() === 'Reload Needed'
         && await page.evaluate(() => localStorage.getItem('spinSelectorLists') === '{"Existing":"Keep me"}'));
     await close();
+    await page.locator('#names').fill('');
+    check('Empty lists hide the rim pointer and clear the wheel', await page.locator('#wheel-pointer').isHidden() && await page.evaluate(() => {
+        const canvas = document.querySelector('#wheel');
+        return !canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data.some(value => value !== 0);
+    }));
     check('No uncaught application errors across the regression flows', errors.length === 0, errors);
     page.off('pageerror', onError);
     return { passed: results.length, checks: results };

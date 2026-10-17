@@ -404,6 +404,17 @@
             cursor: pointer;
         }
 
+        #wheel-pointer {
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            width: 26px;
+            height: 30px;
+            transform: translateX(-50%);
+            pointer-events: none;
+            z-index: 11;
+        }
+
         #confetti-canvas {
             pointer-events: none;
             z-index: 10;
@@ -431,6 +442,9 @@
                 <div class="wheel-stage" id="wheel-stage">
                     <canvas id="wheel" role="button" tabindex="0" aria-label="Spin the wheel"></canvas>
                     <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+                    <svg id="wheel-pointer" viewBox="0 0 26 30" aria-hidden="true" focusable="false">
+                        <path d="M1 1H25L13 29Z" fill="#adb5bd" stroke="#000000" stroke-width="1" />
+                    </svg>
                 </div>
             </div>
             <div class="col-lg-4 controls-column">
@@ -645,6 +659,7 @@ Helen</textarea>
             const main = document.getElementById('app-main');
             const wheelColumn = document.getElementById('wheel-column');
             const wheelStage = document.getElementById('wheel-stage');
+            const wheelPointer = document.getElementById('wheel-pointer');
             const wheelCanvas = document.getElementById('wheel');
             const ctx = wheelCanvas.getContext('2d');
             const confettiCanvas = document.getElementById('confetti-canvas');
@@ -837,6 +852,7 @@ Helen</textarea>
                 savedListsDropdown.disabled = isSpinning || !Object.keys(store.lists).length;
                 loadListBtn.disabled = deleteListBtn.disabled = isSpinning || !selected;
                 wheelCanvas.setAttribute('aria-disabled', String(isSpinning || importInProgress || !names.length));
+                wheelPointer.classList.toggle('d-none', !names.length);
                 undoImportBtn.disabled = isSpinning;
                 undoImportBtn.classList.toggle('d-none', !undoImport);
                 recoveryBtn.disabled = isSpinning;
@@ -944,7 +960,7 @@ Helen</textarea>
                 if (!names.length) return;
                 const radius = canvasCssSize / 2;
                 const angle = fullRotation / names.length;
-                const outerText = Math.max(1, radius - Math.min(45, canvasCssSize * .2) - Math.min(10, radius * .1));
+                const outerText = Math.max(1, radius - 12);
                 const fontSize = Math.min(50, Math.max(1, radius / 6.5));
                 const segmentPath = index => {
                     offscreenCtx.beginPath();
@@ -982,16 +998,6 @@ Helen</textarea>
                 ctx.rotate(rotation);
                 ctx.drawImage(offscreenCanvas, -radius, -radius, canvasCssSize, canvasCssSize);
                 ctx.restore();
-                ctx.fillStyle = '#adb5bd';
-                ctx.beginPath();
-                ctx.moveTo(radius - 15, 5);
-                ctx.lineTo(radius + 15, 5);
-                ctx.lineTo(radius, Math.min(45, canvasCssSize * .2));
-                ctx.closePath();
-                ctx.fill();
-                ctx.strokeStyle = '#000000';
-                ctx.lineWidth = 1;
-                ctx.stroke();
             };
             const redraw = () => {
                 setCanvasSize();
