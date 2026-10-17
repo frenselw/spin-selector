@@ -33,16 +33,19 @@ jobs:
           grep -qi '<!DOCTYPE html>' index.html
           grep -Eqi '<title>[[:space:]]*SpinSelector[[:space:]]*</title>' index.html
 
-      - name: Deploy to TMDHosting
+      - name: Deploy SpinSelector
+        if: github.repository == 'frenselw/spin-selector'
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SPIN_SELECTOR_SSH_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.SPIN_SELECTOR_KNOWN_HOSTS }}
+          SSH_TARGET: ${{ secrets.SPIN_SELECTOR_SSH_TARGET }}
         run: |
           set -euo pipefail
           umask 077
 
           test -n "${SSH_PRIVATE_KEY:-}"
           test -n "${SSH_KNOWN_HOSTS:-}"
+          test -n "${SSH_TARGET:-}"
 
           KEY="$RUNNER_TEMP/spin-selector-key"
           HOSTS="$RUNNER_TEMP/spin-selector-known-hosts"
@@ -59,5 +62,5 @@ jobs:
             -o UserKnownHostsFile="$HOSTS" \
             -o ConnectTimeout=20 \
             -i "$KEY" \
-            emmphysi@s4267.sgp1.stableserver.net \
+            "$SSH_TARGET" \
             'deploy-spin-selector' < index.html
