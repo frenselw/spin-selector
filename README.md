@@ -61,6 +61,16 @@ The `excluded` values must exactly match the entry text. They are skipped while 
 
 These settings are configured only by manually editing the imported JSON file. Entries remain visible normally; the interface does not display the settings, their count, or any identifying markers. Saving, copying, loading, and exporting a list preserve its settings, including names temporarily absent from the entries.
 
+## Tests
+
+The app runs directly from `index.html` without installing dependencies. Development tests are kept in `tests/`:
+
+- `data.test.cjs`: Unit-style tests for list data, selection rules, and storage failure handling. Run with `node --test tests/data.test.cjs`; no extra packages are required.
+- `browser-checks.js`: Browser regression checks for user interactions and rendering. Open the app's local HTTP URL in a disposable Playwright CLI session, then use `run-code --filename=<absolute path to tests/browser-checks.js>`.
+- `offline-smoke.cjs`: Checks direct `file://` use without network access and a real ten-second spin. Requires Playwright; run with `node tests/offline-smoke.cjs`. `PLAYWRIGHT_MODULE_PATH` can point to an existing Playwright installation, and `PLAYWRIGHT_CHANNEL=chrome` selects installed Chrome.
+
+Generated screenshots and browser artifacts are ignored by Git, as are local audit and remediation documents.
+
 ## Changelog
 ### 1.1.5 (October 17, 2026)
 - **Consistent Results:** Lock list changes during spins, queue dialogs, and keep the wheel on the announced winner.
