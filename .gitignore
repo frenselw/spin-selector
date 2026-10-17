@@ -4,3 +4,6 @@ REMEDIATION_PLAN.md
 node_modules/
 .playwright-cli/
 output/playwright/
+tests/
+AUDIT_REPORT_*.md
+REMEDIATION_RESULTS_*.md
