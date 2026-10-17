@@ -30,7 +30,7 @@ The primary motivation for creating SpinSelector was the need for a faster, offl
 2.  Type your items into the "Entries" text box, with each item on a new line.
 3.  Click the wheel to spin. You can also focus the wheel with Tab and press Enter or Space.
 
-Wheel labels always show the complete entry, aligned near the outer rim. Each label scales to fit its segment, so longer names use smaller text instead of ellipses or truncation. The pointer sits at the rim to keep the names clear.
+Wheel labels always show the complete entry, aligned near the outer rim. Each label scales to fit its segment, so longer names use smaller text instead of ellipses or truncation. Labels use black text across all themes; darker segment colors are lightened to maintain readable contrast. The pointer sits at the rim to keep the names clear.
 
 Use **Load** to reload the selected saved list after editing it. Importing lists asks how to handle existing names; **Undo Last Import** restores the previous saved lists until the next saved-list change or page reload.
 

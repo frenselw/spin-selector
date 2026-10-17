@@ -230,10 +230,10 @@ async (page) => {
         await page.locator('[data-bs-toggle="dropdown"]').click();
         await page.locator(`[data-theme="${theme}"]`).click();
         const rendered = await page.evaluate(() => ({ labels: window.wheelLabels.slice(-8), backgrounds: window.wheelFillColors.slice(-8) }));
-        check(`F10: every ${theme} segment has readable fill contrast`, rendered.labels.length === 8 && rendered.labels.every((label, index) => {
+        check(`F10: every ${theme} segment uses readable black text`, rendered.labels.length === 8 && rendered.labels.every((label, index) => {
             const a = luminance(label.color);
             const b = luminance(rendered.backgrounds[index]);
-            return (Math.max(a, b) + .05) / (Math.min(a, b) + .05) >= 4.5;
+            return label.color === '#000000' && (Math.max(a, b) + .05) / (Math.min(a, b) + .05) >= 4.5;
         }), rendered);
     }
     await page.locator('#names').fill('ABCDEFGHIJKLMNOPQRSTUVWXYZ ABCDEFGHIJKLMNOPQRSTUVWXYZ\nBob');

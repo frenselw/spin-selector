@@ -812,14 +812,15 @@ Helen</textarea>
             document.addEventListener('click', closeDropdowns);
 
             const themes = {
-                dark: ['#0d6efd', '#854bcc', '#d63384', '#dc3545', '#fd7e14', '#ffc107', '#198754', '#20c997'],
-                neon: ['#f72585', '#b5179e', '#7209b7', '#480ca8', '#3f37c9', '#4895ef', '#4cc9f0'],
-                oceanic: ['#03045e', '#0077b6', '#00b4d8', '#90e0ef', '#caf0f8'],
+                // Keep every segment readable with the same black label color (contrast >= 4.5:1).
+                dark: ['#0d6efd', '#905bd1', '#d63384', '#dc3545', '#fd7e14', '#ffc107', '#198754', '#20c997'],
+                neon: ['#f72585', '#c23eaf', '#9d55cd', '#8862c7', '#6e68d6', '#4895ef', '#4cc9f0'],
+                oceanic: ['#7171a4', '#0a7db9', '#00b4d8', '#90e0ef', '#caf0f8'],
                 pastel: ['#ffadad', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff', '#a0c4ff', '#bdb2ff'],
-                forest: ['#2d6a4f', '#40916c', '#52b788', '#74c69d', '#95d5b2'],
+                forest: ['#4d8069', '#40916c', '#52b788', '#74c69d', '#95d5b2'],
                 sunset: ['#f94144', '#f3722c', '#f8961e', '#f9c74f', '#90be6d', '#43aa8b'],
-                grayscale: ['#212529', '#495057', '#adb5bd', '#dee2e6', '#f8f9fa'],
-                light: ['#0077b6', '#00b4d8', '#90e0ef', '#ff7f51', '#ffb703', '#8338ec']
+                grayscale: ['#747679', '#71777c', '#adb5bd', '#dee2e6', '#f8f9fa'],
+                light: ['#0a7db9', '#00b4d8', '#90e0ef', '#ff7f51', '#ffb703', '#9250ee']
             };
             let names = [];
             let excludedNames = new Set();
@@ -915,12 +916,6 @@ Helen</textarea>
                 ]);
             });
 
-            const textColor = color => {
-                const channels = color.match(/[a-f\d]{2}/gi).map(part => parseInt(part, 16) / 255)
-                    .map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
-                const luminance = channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;
-                return (luminance + .05) / .05 >= 1.05 / (luminance + .05) ? '#000000' : '#ffffff';
-            };
             const drawFullLabel = (name, angle, outerText, fontSize) => {
                 offscreenCtx.font = `bold ${fontSize}px Arial`;
                 offscreenCtx.textAlign = 'right';
@@ -983,7 +978,7 @@ Helen</textarea>
                     segmentPath(index);
                     offscreenCtx.clip();
                     offscreenCtx.rotate((index + .5) * angle);
-                    offscreenCtx.fillStyle = textColor(currentColors[index % currentColors.length]);
+                    offscreenCtx.fillStyle = '#000000';
                     drawFullLabel(name, angle, outerText, fontSize);
                     offscreenCtx.restore();
                 });
