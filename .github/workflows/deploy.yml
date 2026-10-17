@@ -1,0 +1,60 @@
+
+name: Deploy SpinSelector
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spin-selector-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run unit tests
+        run: node --test tests/data.test.cjs
+
+      - name: Validate HTML
+        run: |
+          test -s index.html
+          grep -qi '<!DOCTYPE html>' index.html
+          grep -Eqi '<title>[[:space:]]*SpinSelector[[:space:]]*</title>' index.html
+
+      - name: Deploy to TMDHosting
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SPIN_SELECTOR_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SPIN_SELECTOR_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          umask 077
+
+          test -n "${SSH_PRIVATE_KEY:-}"
+          test -n "${SSH_KNOWN_HOSTS:-}"
+
+          KEY="$RUNNER_TEMP/spin-selector-key"
+          HOSTS="$RUNNER_TEMP/spin-selector-known-hosts"
+
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$KEY"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$HOSTS"
+
+          chmod 600 "$KEY" "$HOSTS"
+
+          ssh -T \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOSTS" \
+            -o ConnectTimeout=20 \
+            -i "$KEY" \
+            emmphysi@s4267.sgp1.stableserver.net \
+            'deploy-spin-selector' < index.html
