@@ -1,3 +1,6 @@
 readme.txt
 AGENTS.md
 REMEDIATION_PLAN.md
+node_modules/
+.playwright-cli/
+output/playwright/

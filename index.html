@@ -7,7 +7,7 @@
     <title>SpinSelector</title>
     <!--
     SpinSelector - A Standalone Random Name Picker Wheel
-    Version: 1.1.4
+    Version: 1.1.5
 
     Copyright (C) 2025 Hang Wong
 
@@ -74,6 +74,7 @@
         .col-lg-8,
         .col-lg-4 {
             flex: 1 1 100%;
+            min-width: 0;
         }
 
         .d-flex {
@@ -171,7 +172,7 @@
         }
 
         .d-none {
-            display: none;
+            display: none !important;
         }
 
         .input-group {
@@ -218,6 +219,23 @@
             text-align: center;
             text-decoration: none;
             cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: .55;
+            cursor: not-allowed;
+        }
+
+        :focus-visible {
+            outline: 3px solid var(--info);
+            outline-offset: 3px;
+        }
+
+        .storage-notice {
+            margin-top: 1rem;
+            padding: .75rem;
+            border: 1px solid var(--border);
+            border-radius: .375rem;
         }
 
         .btn-sm {
@@ -316,6 +334,8 @@
 
         .modal-dialog {
             width: min(100%, 500px);
+            max-height: calc(100vh - 2rem);
+            overflow-y: auto;
         }
 
         .modal-content {
@@ -340,6 +360,7 @@
 
         .modal-footer {
             justify-content: flex-end;
+            flex-wrap: wrap;
         }
 
         .modal-footer.justify-content-center {
@@ -365,18 +386,22 @@
             }
         }
 
-        canvas {
+        .wheel-stage {
+            position: relative;
             max-width: 100%;
-            max-height: 85vh;
+            aspect-ratio: 1;
+            margin: 0 auto .75rem;
+        }
+
+        .wheel-stage canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
         }
 
         #wheel {
             cursor: pointer;
-            transition: transform 0.2s ease-in-out;
-        }
-
-        #wheel:hover {
-            transform: scale(1.02);
         }
 
         #confetti-canvas {
@@ -395,20 +420,23 @@
 </head>
 
 <body class="d-flex flex-column min-vh-100 py-4 bg-body-tertiary">
-    <main class="container-fluid flex-grow-1">
+    <main class="container-fluid flex-grow-1" id="app-main">
         <header class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="h3 mb-0">SpinSelector</h1>
             <button class="btn btn-sm btn-outline-secondary" id="about-btn">About</button>
         </header>
 
         <div class="row justify-content-center align-items-center">
-            <div class="col-lg-8 text-center position-relative">
-                <canvas id="wheel"></canvas>
-                <canvas id="confetti-canvas" class="position-absolute top-0 start-0"></canvas>
+            <div class="col-lg-8 text-center" id="wheel-column">
+                <div class="wheel-stage" id="wheel-stage">
+                    <canvas id="wheel" role="img" aria-label="Selection wheel. Use the Spin button to choose an entry."></canvas>
+                    <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+                </div>
+                <button class="btn btn-primary" id="spin-btn">Spin</button>
             </div>
             <div class="col-lg-4 controls-column">
                 <div class="mb-4">
-                    <h5 class="mb-2">Entries</h5>
+                    <h5 class="mb-2"><label for="names">Entries</label></h5>
                     <textarea id="names" class="form-control" rows="8">Alice
 Bob
 Charlie
@@ -421,11 +449,12 @@ Helen</textarea>
                 <div class="mb-4">
                     <h5 class="mb-2">Manage Lists</h5>
                     <div class="input-group mb-2">
-                        <input type="text" id="list-name-input" class="form-control" placeholder="Current List Name">
+                        <input type="text" id="list-name-input" class="form-control" placeholder="Current List Name" aria-label="Current List Name">
                         <button class="btn btn-primary" id="save-list-btn">Save</button>
                     </div>
                     <div class="input-group">
-                        <select class="form-select" id="saved-lists-dropdown"></select>
+                        <select class="form-select" id="saved-lists-dropdown" aria-label="Saved lists"></select>
+                        <button class="btn btn-secondary" id="load-list-btn">Load</button>
                         <button class="btn btn-danger" id="delete-list-btn">Delete</button>
                     </div>
                 </div>
@@ -448,24 +477,29 @@ Helen</textarea>
                             </ul>
                         </div>
                         <button class="btn btn-success" id="export-lists-btn">Export Lists to File</button>
-                        <label for="import-file-input" class="btn btn-info">Import Lists from File</label>
-                        <input type="file" id="import-file-input" class="d-none">
+                        <button class="btn btn-info" id="import-lists-btn">Import Lists from File</button>
+                        <input type="file" id="import-file-input" class="d-none" accept=".json,application/json" tabindex="-1" aria-label="Choose a list file">
+                        <button class="btn btn-outline-secondary d-none" id="undo-import-btn">Undo Last Import</button>
                     </div>
+                </div>
+                <div class="storage-notice d-none" id="storage-notice">
+                    <p id="storage-message" role="status"></p>
+                    <button class="btn btn-secondary d-none" id="storage-recovery-btn">Recover Saved Lists</button>
                 </div>
             </div>
         </div>
     </main>
 
-    <div class="modal fade" id="winnerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="winnerModal" role="dialog" tabindex="-1" aria-hidden="true" aria-labelledby="winner-title" aria-describedby="winner-name">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header border-0">
-                    <h5 class="modal-title">Congratulations!</h5><button type="button" class="btn-close"
-                        data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title" id="winner-title">Congratulations!</h5><button type="button" class="btn-close"
+                        data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body text-center">
                     <p class="lead">The winner is...</p>
-                    <h2 id="winner-name" class="display-4"></h2>
+                    <h2 id="winner-name" class="display-4" tabindex="-1" data-modal-focus></h2>
                 </div>
                 <div class="modal-footer border-0 justify-content-center"><button type="button"
                         class="btn btn-secondary" data-bs-dismiss="modal">Close</button><button type="button"
@@ -474,12 +508,12 @@ Helen</textarea>
         </div>
     </div>
 
-    <div class="modal fade" id="infoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="infoModal" role="dialog" tabindex="-1" aria-hidden="true" aria-labelledby="infoModalTitle" aria-describedby="infoModalBody">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="infoModalTitle"></h5><button type="button" class="btn-close"
-                        data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title" id="infoModalTitle" tabindex="-1" data-modal-focus></h5><button type="button" class="btn-close"
+                        data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <p id="infoModalBody"></p>
@@ -489,15 +523,15 @@ Helen</textarea>
         </div>
     </div>
 
-    <div class="modal fade" id="aboutModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="aboutModal" role="dialog" tabindex="-1" aria-hidden="true" aria-labelledby="about-title">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">About SpinSelector</h5><button type="button" class="btn-close"
-                        data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title" id="about-title" tabindex="-1" data-modal-focus>About SpinSelector</h5><button type="button" class="btn-close"
+                        data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-body-secondary">Version 1.1.4</p>
+                    <p class="text-body-secondary">Version 1.1.5</p>
                     <p>&copy; 2025 Hang Wong.</p>
                     <p>This software is open-source and licensed under the <a href="LICENSE">MIT License</a>.</p>
                 </div>
@@ -507,659 +541,692 @@ Helen</textarea>
         </div>
     </div>
 
+    <script id="list-data">
+        // Kept inline so the application remains a single offline HTML file.
+        const SpinSelectorData = (() => {
+            const dictionary = () => Object.create(null);
+            const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+            const normalizeRecord = (record) => {
+                if (typeof record === 'string') return { entries: record, excluded: [] };
+                if (!record || typeof record !== 'object' || Array.isArray(record) || typeof record.entries !== 'string') {
+                    throw new Error('Invalid list record');
+                }
+                const excluded = record.excluded ?? [];
+                if (!Array.isArray(excluded) || !excluded.every(name => typeof name === 'string')) {
+                    throw new Error('Invalid list record');
+                }
+                return { entries: record.entries, excluded: [...new Set(excluded)] };
+            };
+            const normalizeLists = (data, { recover = false } = {}) => {
+                if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Invalid list file');
+                let records = data;
+                if (hasOwn(data, 'version') && typeof data.version === 'number') {
+                    if (data.version !== 2) throw new Error('Unsupported list file version');
+                    records = data.lists;
+                }
+                if (!records || typeof records !== 'object' || Array.isArray(records)) throw new Error('Invalid list file');
+                const lists = dictionary();
+                let invalidCount = 0;
+                for (const [name, record] of Object.entries(records)) {
+                    try {
+                        if (!name.trim()) throw new Error('Invalid list name');
+                        lists[name] = normalizeRecord(record);
+                    } catch (error) {
+                        if (!recover) throw error;
+                        invalidCount++;
+                    }
+                }
+                return { lists, invalidCount };
+            };
+            const copyLists = lists => normalizeLists(lists).lists;
+            const serialize = lists => JSON.stringify({ version: 2, lists });
+            const mergeLists = (current, imported, replace) => {
+                const merged = copyLists(current);
+                for (const [name, record] of Object.entries(imported)) {
+                    if (replace || !hasOwn(merged, name)) merged[name] = normalizeRecord(record);
+                }
+                return merged;
+            };
+            const selectIndex = (names, excluded, random = Math.random) => {
+                const eligible = names.map((name, index) => excluded.has(name) ? -1 : index).filter(index => index >= 0);
+                const indices = eligible.length ? eligible : names.map((name, index) => index);
+                return indices.length ? indices[Math.floor(random() * indices.length)] : -1;
+            };
+            const createStore = (getStorage) => {
+                let lists = dictionary();
+                let recoveryRaw = null;
+                let loadUnavailable = false;
+                return {
+                    get lists() { return lists; },
+                    get recoveryRaw() { return recoveryRaw; },
+                    load() {
+                        let raw;
+                        try {
+                            raw = getStorage().getItem('spinSelectorLists');
+                        } catch (error) {
+                            loadUnavailable = true;
+                            return { unavailable: true, recovery: false };
+                        }
+                        loadUnavailable = false;
+                        if (raw === null) return { unavailable: false, recovery: false };
+                        try {
+                            const normalized = normalizeLists(JSON.parse(raw), { recover: true });
+                            lists = normalized.lists;
+                            if (normalized.invalidCount) recoveryRaw = raw;
+                        } catch (error) {
+                            recoveryRaw = raw;
+                        }
+                        return { unavailable: false, recovery: recoveryRaw !== null };
+                    },
+                    save(next, { recover = false } = {}) {
+                        if (recoveryRaw !== null && !recover) return { ok: false, reason: 'recovery' };
+                        const candidate = copyLists(next);
+                        try {
+                            // A failed initial read must not let a later write replace unseen lists.
+                            if (loadUnavailable && getStorage().getItem('spinSelectorLists') !== null) {
+                                return { ok: false, reason: 'reload' };
+                            }
+                            getStorage().setItem('spinSelectorLists', serialize(candidate));
+                        } catch (error) {
+                            return { ok: false, reason: 'storage' };
+                        }
+                        lists = candidate;
+                        loadUnavailable = false;
+                        if (recover) recoveryRaw = null;
+                        return { ok: true };
+                    }
+                };
+            };
+            return { dictionary, hasOwn, normalizeLists, copyLists, serialize, mergeLists, selectIndex, createStore };
+        })();
+    </script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const data = SpinSelectorData;
+            const main = document.getElementById('app-main');
+            const wheelColumn = document.getElementById('wheel-column');
+            const wheelStage = document.getElementById('wheel-stage');
             const wheelCanvas = document.getElementById('wheel');
-            const ctx = wheelCanvas.getContext('2d', { willReadFrequently: false });
+            const ctx = wheelCanvas.getContext('2d');
             const confettiCanvas = document.getElementById('confetti-canvas');
-            const confettiCtx = confettiCanvas.getContext('2d', { willReadFrequently: false });
-
+            const confettiCtx = confettiCanvas.getContext('2d');
+            const spinButton = document.getElementById('spin-btn');
             const shuffleButton = document.getElementById('shuffle');
             const namesInput = document.getElementById('names');
             const themeSelector = document.getElementById('theme-selector');
             const listNameInput = document.getElementById('list-name-input');
             const saveListBtn = document.getElementById('save-list-btn');
             const savedListsDropdown = document.getElementById('saved-lists-dropdown');
+            const loadListBtn = document.getElementById('load-list-btn');
             const deleteListBtn = document.getElementById('delete-list-btn');
             const exportListsBtn = document.getElementById('export-lists-btn');
+            const importListsBtn = document.getElementById('import-lists-btn');
             const importFileInput = document.getElementById('import-file-input');
-            const aboutBtn = document.getElementById('about-btn');
+            const undoImportBtn = document.getElementById('undo-import-btn');
+            const storageNotice = document.getElementById('storage-notice');
+            const storageMessage = document.getElementById('storage-message');
+            const recoveryBtn = document.getElementById('storage-recovery-btn');
+            const winnerNameElement = document.getElementById('winner-name');
+            const removeWinnerBtn = document.getElementById('remove-winner-btn');
+            const store = data.createStore(() => window.localStorage);
 
+            // Show one dialog at a time, including results arriving during another dialog.
             const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-            let previousFocus = null;
-
-            const getFocusable = (element) => [...element.querySelectorAll(focusableSelector)]
+            const getFocusable = element => [...element.querySelectorAll(focusableSelector)]
                 .filter(node => !node.disabled && node.offsetParent !== null);
-
-            const createModal = (element) => ({
-                show() {
-                    previousFocus = document.activeElement;
-                    element.classList.add('show');
-                    element.setAttribute('aria-modal', 'true');
-                    element.setAttribute('aria-hidden', 'false');
-                    element.setAttribute('role', 'dialog');
-                    (getFocusable(element)[0] || element).focus();
-                },
-                hide() {
-                    hideModal(element);
-                }
-            });
-            const hideModal = (element) => {
+            const modalQueue = [];
+            let activeModal = null;
+            const presentNextModal = () => {
+                if (activeModal || !modalQueue.length) return;
+                activeModal = modalQueue.shift();
+                activeModal.prepare();
+                main.inert = true;
+                activeModal.element.classList.add('show');
+                activeModal.element.setAttribute('aria-modal', 'true');
+                activeModal.element.setAttribute('aria-hidden', 'false');
+                (activeModal.element.querySelector('[data-modal-focus]') || getFocusable(activeModal.element)[0] || activeModal.element).focus();
+            };
+            const hideModal = element => {
+                if (activeModal?.element !== element) return;
+                const previousFocus = activeModal.previousFocus;
                 element.classList.remove('show');
                 element.removeAttribute('aria-modal');
                 element.setAttribute('aria-hidden', 'true');
-                element.removeAttribute('role');
-                if (previousFocus && document.contains(previousFocus)) {
-                    previousFocus.focus();
-                    previousFocus = null;
+                activeModal = null;
+                if (modalQueue.length) {
+                    presentNextModal();
+                } else {
+                    main.inert = false;
+                    if (previousFocus && !previousFocus.disabled && previousFocus.offsetParent !== null) previousFocus.focus();
+                    else spinButton.focus();
                 }
             };
+            const createModal = element => ({
+                show(prepare = () => {}) {
+                    modalQueue.push({ element, prepare, previousFocus: document.activeElement });
+                    presentNextModal();
+                },
+                hide() { hideModal(element); }
+            });
+            const winnerModal = createModal(document.getElementById('winnerModal'));
+            const infoModalElement = document.getElementById('infoModal');
+            const infoModal = createModal(infoModalElement);
+            const aboutModal = createModal(document.getElementById('aboutModal'));
+            const showModal = (title, body, buttons = []) => {
+                infoModal.show(() => {
+                    document.getElementById('infoModalTitle').textContent = title;
+                    document.getElementById('infoModalBody').textContent = body;
+                    const footer = document.getElementById('infoModalFooter');
+                    footer.replaceChildren();
+                    const actions = buttons.length ? buttons : [{ label: 'Close', class: 'btn-secondary' }];
+                    for (const action of actions) {
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = `btn ${action.class || 'btn-secondary'}`;
+                        button.textContent = action.label;
+                        button.addEventListener('click', () => {
+                            infoModal.hide();
+                            action.onClick?.();
+                        });
+                        footer.appendChild(button);
+                    }
+                });
+            };
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', event => {
+                    if (event.target === modal || event.target.closest('[data-bs-dismiss="modal"]')) hideModal(modal);
+                });
+            });
             const closeDropdowns = () => {
                 document.querySelectorAll('.dropdown.show').forEach(dropdown => {
                     const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
-                    const shouldRestoreFocus = dropdown.contains(document.activeElement);
+                    const restoreFocus = dropdown.contains(document.activeElement);
                     dropdown.classList.remove('show');
-                    toggle?.setAttribute('aria-expanded', 'false');
-                    if (shouldRestoreFocus) toggle?.focus();
+                    toggle.setAttribute('aria-expanded', 'false');
+                    if (restoreFocus) toggle.focus();
                 });
             };
-
-            document.querySelectorAll('.modal').forEach(modal => {
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal || e.target.closest('[data-bs-dismiss="modal"]')) {
-                        hideModal(modal);
-                    }
-                });
-            });
-
-            document.addEventListener('keydown', (e) => {
-                const activeModal = document.querySelector('.modal.show');
-                if (e.key === 'Escape') {
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') {
                     closeDropdowns();
-                    if (activeModal) hideModal(activeModal);
+                    if (activeModal) hideModal(activeModal.element);
                 }
-
-                if (e.key === 'Tab' && activeModal) {
-                    const focusable = getFocusable(activeModal);
-                    if (focusable.length === 0) {
-                        e.preventDefault();
-                        activeModal.focus();
-                        return;
-                    }
-                    const first = focusable[0];
-                    const last = focusable[focusable.length - 1];
-                    if (e.shiftKey && document.activeElement === first) {
-                        e.preventDefault();
-                        last.focus();
-                    } else if (!e.shiftKey && document.activeElement === last) {
-                        e.preventDefault();
-                        first.focus();
-                    }
+                if (event.key !== 'Tab' || !activeModal) return;
+                const focusable = getFocusable(activeModal.element);
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                const outside = !activeModal.element.contains(document.activeElement);
+                if (!first) {
+                    event.preventDefault();
+                    activeModal.element.focus();
+                } else if (event.shiftKey && (document.activeElement === first || outside || !focusable.includes(document.activeElement))) {
+                    event.preventDefault();
+                    last.focus();
+                } else if (!event.shiftKey && (document.activeElement === last || outside)) {
+                    event.preventDefault();
+                    first.focus();
                 }
             });
-
             document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(toggle => {
                 toggle.setAttribute('aria-expanded', 'false');
-                toggle.addEventListener('click', (e) => {
-                    e.stopPropagation();
+                toggle.addEventListener('click', event => {
+                    event.stopPropagation();
                     const dropdown = toggle.closest('.dropdown');
-                    const shouldOpen = !dropdown.classList.contains('show');
+                    const open = !dropdown.classList.contains('show');
                     closeDropdowns();
-                    dropdown.classList.toggle('show', shouldOpen);
-                    toggle.setAttribute('aria-expanded', String(shouldOpen));
+                    dropdown.classList.toggle('show', open);
+                    toggle.setAttribute('aria-expanded', String(open));
                 });
-
-                toggle.addEventListener('keydown', (e) => {
-                    if (e.key !== 'ArrowDown') return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const dropdown = toggle.closest('.dropdown');
+                toggle.addEventListener('keydown', event => {
+                    if (event.key !== 'ArrowDown') return;
+                    event.preventDefault();
+                    event.stopPropagation();
                     closeDropdowns();
-                    dropdown.classList.add('show');
+                    toggle.closest('.dropdown').classList.add('show');
                     toggle.setAttribute('aria-expanded', 'true');
-                    dropdown.querySelector('.dropdown-item')?.focus();
+                    toggle.closest('.dropdown').querySelector('.dropdown-item').focus();
                 });
             });
-
             document.querySelectorAll('.dropdown').forEach(dropdown => {
-                dropdown.addEventListener('keydown', (e) => {
-                    if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return;
-                    e.preventDefault();
+                dropdown.addEventListener('keydown', event => {
+                    if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
+                    event.preventDefault();
                     const items = [...dropdown.querySelectorAll('.dropdown-item')];
                     const index = items.indexOf(document.activeElement);
-                    const next = e.key === 'ArrowDown'
-                        ? items[(index + 1) % items.length]
-                        : items[(index - 1 + items.length) % items.length];
-                    next?.focus();
+                    items[(index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
                 });
             });
-
             document.addEventListener('click', closeDropdowns);
 
-            const winnerModal = createModal(document.getElementById('winnerModal'));
-            const winnerNameElement = document.getElementById('winner-name');
-            const removeWinnerBtn = document.getElementById('remove-winner-btn');
-            const infoModal = createModal(document.getElementById('infoModal'));
-            const infoModalTitle = document.getElementById('infoModalTitle');
-            const infoModalBody = document.getElementById('infoModalBody');
-            const infoModalFooter = document.getElementById('infoModalFooter');
-            const aboutModal = createModal(document.getElementById('aboutModal'));
-
             const themes = {
-                dark: ["#0d6efd", "#854bcc", "#d63384", "#dc3545", "#fd7e14", "#ffc107", "#198754", "#20c997"],
-                neon: ["#f72585", "#b5179e", "#7209b7", "#480ca8", "#3f37c9", "#4895ef", "#4cc9f0"],
-                oceanic: ["#03045e", "#0077b6", "#00b4d8", "#90e0ef", "#caf0f8"],
-                pastel: ["#ffadad", "#ffd6a5", "#fdffb6", "#caffbf", "#9bf6ff", "#a0c4ff", "#bdb2ff"],
-                forest: ["#2d6a4f", "#40916c", "#52b788", "#74c69d", "#95d5b2"],
-                sunset: ["#f94144", "#f3722c", "#f8961e", "#f9c74f", "#90be6d", "#43aa8b"],
-                grayscale: ["#212529", "#495057", "#adb5bd", "#dee2e6", "#f8f9fa"],
-                light: ["#0077b6", "#00b4d8", "#90e0ef", "#ff7f51", "#ffb703", "#8338ec"]
+                dark: ['#0d6efd', '#854bcc', '#d63384', '#dc3545', '#fd7e14', '#ffc107', '#198754', '#20c997'],
+                neon: ['#f72585', '#b5179e', '#7209b7', '#480ca8', '#3f37c9', '#4895ef', '#4cc9f0'],
+                oceanic: ['#03045e', '#0077b6', '#00b4d8', '#90e0ef', '#caf0f8'],
+                pastel: ['#ffadad', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff', '#a0c4ff', '#bdb2ff'],
+                forest: ['#2d6a4f', '#40916c', '#52b788', '#74c69d', '#95d5b2'],
+                sunset: ['#f94144', '#f3722c', '#f8961e', '#f9c74f', '#90be6d', '#43aa8b'],
+                grayscale: ['#212529', '#495057', '#adb5bd', '#dee2e6', '#f8f9fa'],
+                light: ['#0077b6', '#00b4d8', '#90e0ef', '#ff7f51', '#ffb703', '#8338ec']
             };
             let names = [];
             let excludedNames = new Set();
             let currentColors = themes.dark;
-            let savedLists = {};
             let rotation = 0;
-            let offscreenCanvas;
-            let offscreenCtx;
-            let resizeTimeout;
+            const offscreenCanvas = document.createElement('canvas');
+            const offscreenCtx = offscreenCanvas.getContext('2d');
             let canvasCssSize = 0;
             let canvasScale = 1;
+            let resizeTimeout;
             let isSpinning = false;
+            let importInProgress = false;
             let spinStartTime = 0;
             let startRotation = 0;
             let totalSpinAngle = 0;
             const spinDuration = 10000;
-            let lastWinnerIndex = -1;
+            let spinSnapshot = null;
             let pendingWinnerIndex = -1;
-            let spinAllowsExcluded = false;
+            let lastWinnerIndex = -1;
+            let lastWinnerName = '';
+            let hasResult = false;
             let confetti = [];
-
-            const showModal = (title, body, buttons = []) => {
-                infoModalTitle.textContent = title;
-                infoModalBody.textContent = body;
-                infoModalFooter.innerHTML = '';
-
-                if (buttons.length === 0) {
-                    const closeBtn = document.createElement('button');
-                    closeBtn.type = 'button';
-                    closeBtn.className = 'btn btn-secondary';
-                    closeBtn.textContent = 'Close';
-                    closeBtn.onclick = () => infoModal.hide();
-                    infoModalFooter.appendChild(closeBtn);
-                } else {
-                    buttons.forEach(btnConfig => {
-                        const button = document.createElement('button');
-                        button.type = 'button';
-                        button.className = `btn ${btnConfig.class}`;
-                        button.textContent = btnConfig.label;
-                        button.onclick = () => {
-                            infoModal.hide();
-                            if (btnConfig.onClick) btnConfig.onClick();
-                        };
-                        infoModalFooter.appendChild(button);
-                    });
-                }
-                infoModal.show();
+            let undoImport = null;
+            const fullRotation = 2 * Math.PI;
+            const normalizeAngle = angle => ((angle % fullRotation) + fullRotation) % fullRotation;
+            const updateControls = () => {
+                const selected = data.hasOwn(store.lists, savedListsDropdown.value);
+                [namesInput, listNameInput, shuffleButton, saveListBtn, importListsBtn].forEach(control => control.disabled = isSpinning);
+                importListsBtn.disabled = isSpinning || importInProgress;
+                savedListsDropdown.disabled = isSpinning || !Object.keys(store.lists).length;
+                loadListBtn.disabled = deleteListBtn.disabled = isSpinning || !selected;
+                spinButton.disabled = isSpinning || importInProgress || !names.length;
+                wheelCanvas.setAttribute('aria-disabled', String(spinButton.disabled));
+                undoImportBtn.disabled = isSpinning;
+                undoImportBtn.classList.toggle('d-none', !undoImport);
+                recoveryBtn.disabled = isSpinning;
             };
-
-            const getEligibleIndices = () => names
-                .map((name, index) => excludedNames.has(name) ? -1 : index)
-                .filter(index => index !== -1);
-
-            const getExcludedNamesInEntries = () => {
-                const entryNames = new Set(namesInput.value.split('\n').filter(name => name.trim() !== ''));
-                return [...excludedNames].filter(name => entryNames.has(name));
+            const updateListsDropdown = () => {
+                const selected = savedListsDropdown.value;
+                savedListsDropdown.replaceChildren();
+                const placeholder = new Option('Load a saved list...', '', true, true);
+                placeholder.disabled = true;
+                savedListsDropdown.appendChild(placeholder);
+                for (const name of Object.keys(store.lists)) savedListsDropdown.appendChild(new Option(name, name));
+                savedListsDropdown.value = data.hasOwn(store.lists, selected) ? selected : '';
+                updateControls();
             };
-
-            const normalizeListRecord = (record) => {
-                if (typeof record === 'string') {
-                    return { entries: record, excluded: [] };
-                }
-                if (!record || typeof record !== 'object' || Array.isArray(record) ||
-                    typeof record.entries !== 'string') {
-                    return null;
-                }
-                const excluded = record.excluded ?? [];
-                if (!Array.isArray(excluded) || !excluded.every(name => typeof name === 'string')) {
-                    return null;
-                }
-                return { entries: record.entries, excluded: [...new Set(excluded)] };
+            const setStorageNotice = message => {
+                storageMessage.textContent = message;
+                storageNotice.classList.toggle('d-none', !message);
+                recoveryBtn.classList.toggle('d-none', store.recoveryRaw === null);
             };
-
-            const normalizeListsData = (data) => {
-                const lists = data && typeof data === 'object' && !Array.isArray(data) &&
-                    data.version === 2 && data.lists !== undefined
-                    ? data.lists
-                    : data;
-                if (!lists || typeof lists !== 'object' || Array.isArray(lists)) return null;
-
-                const normalizedLists = {};
-                for (const [listName, record] of Object.entries(lists)) {
-                    if (!listName.trim()) return null;
-                    const normalizedRecord = normalizeListRecord(record);
-                    if (!normalizedRecord) return null;
-                    normalizedLists[listName] = normalizedRecord;
-                }
-                return normalizedLists;
+            const downloadText = (text, filename) => {
+                const url = URL.createObjectURL(new Blob([text], { type: 'application/json;charset=utf-8' }));
+                const anchor = document.createElement('a');
+                anchor.href = url;
+                anchor.download = filename;
+                document.body.appendChild(anchor);
+                anchor.click();
+                anchor.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
             };
-
-            const getDynamicFontSize = (numSegments, radius) => {
-                // Modified values to make font smaller than previous version but still readable
-                const maxFontSize = 50, minFontSize = 14;
-                const baseSize = radius / 6.5; 
-                let fontSize = baseSize - (numSegments * 0.5);
-                return Math.max(minFontSize, Math.min(maxFontSize, fontSize));
-            };
-
-            const getCanvasSize = () => Math.floor(Math.min(window.innerWidth * 0.7, 800, window.innerHeight * 0.85));
-
-            const setCanvasSize = (canvasSize) => {
-                const scale = window.devicePixelRatio || 1;
-                const backingSize = Math.round(canvasSize * scale);
-                if (canvasCssSize === canvasSize && canvasScale === scale && wheelCanvas.width === backingSize) return;
-
-                canvasCssSize = canvasSize;
-                canvasScale = scale;
-
-                [wheelCanvas, confettiCanvas].forEach(canvas => {
-                    canvas.width = backingSize;
-                    canvas.height = backingSize;
-                    canvas.style.width = `${canvasSize}px`;
-                    canvas.style.height = `${canvasSize}px`;
-                });
-                ctx.setTransform(scale, 0, 0, scale, 0, 0);
-                confettiCtx.setTransform(scale, 0, 0, scale, 0, 0);
-            };
-
-            const resizeCanvas = () => {
-                const canvasSize = getCanvasSize();
-                setCanvasSize(canvasSize);
-
-                if (offscreenCanvas) {
-                    offscreenCanvas.width = Math.round(canvasSize * canvasScale);
-                    offscreenCanvas.height = Math.round(canvasSize * canvasScale);
-                    offscreenCtx.setTransform(canvasScale, 0, 0, canvasScale, 0, 0);
-
-                    const radius = canvasSize / 2;
-                    const numSegments = names.length;
-                    if (numSegments > 0) {
-                        const fontSize = getDynamicFontSize(numSegments, radius);
-                        const anglePerSegment = 2 * Math.PI / numSegments;
-                        prerenderWheel(numSegments, radius, fontSize, anglePerSegment);
+            const commitLists = (next, { recover = false } = {}) => {
+                const result = store.save(next, { recover });
+                if (!result.ok) {
+                    if (result.reason === 'recovery') {
+                        showModal('Recovery Needed', 'Your original saved data is protected. Use Recover Saved Lists before changing saved lists.');
+                    } else if (result.reason === 'reload') {
+                        setStorageNotice('Existing saved data is protected. Reload the page to load it before making saved-list changes.');
+                        showModal('Reload Needed', 'Browser storage became available and contains saved data. Copy any current entries you need, then reload the page before saving changes. Existing saved lists have not been changed.');
+                    } else {
+                        setStorageNotice('Browser storage could not be written. Existing saved data has not been changed.');
+                        showModal('Storage Error', 'Could not save this change. Browser storage may be full or unavailable. Existing saved lists have not been changed.');
                     }
+                    return false;
                 }
-                drawWheel();
+                undoImport = null;
+                setStorageNotice('');
+                updateListsDropdown();
+                return true;
             };
+            recoveryBtn.addEventListener('click', () => {
+                if (isSpinning || store.recoveryRaw === null) return;
+                showModal('Saved List Recovery', 'The original saved data has not been changed. Download it for safekeeping. You can then explicitly replace it with the lists that could be recovered.', [
+                    { label: 'Close' },
+                    { label: 'Download Original', class: 'btn-primary', onClick: () => downloadText(store.recoveryRaw, 'spinselector_recovery.json') },
+                    { label: 'Use Recovered Lists', class: 'btn-danger', onClick: () => showModal('Replace Saved Data', 'This replaces the original saved data with the recovered lists. Download the original first if you need to keep all source data. Continue?', [
+                        { label: 'Cancel' },
+                        { label: 'Replace', class: 'btn-danger', onClick: () => {
+                            if (commitLists(store.lists, { recover: true })) showModal('Recovered', 'Recovered lists have been saved.');
+                        } }
+                    ]) }
+                ]);
+            });
 
-            const debounceResize = () => {
-                clearTimeout(resizeTimeout);
-                resizeTimeout = setTimeout(resizeCanvas, 100);
+            const textColor = color => {
+                const channels = color.match(/[a-f\d]{2}/gi).map(part => parseInt(part, 16) / 255)
+                    .map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
+                const luminance = channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;
+                return (luminance + .05) / .05 >= 1.05 / (luminance + .05) ? '#000000' : '#ffffff';
             };
-
-            window.addEventListener('resize', debounceResize);
-
-            const prerenderWheel = (numSegments, radius, fontSize, anglePerSegment) => {
-                if (numSegments === 0) {
-                    offscreenCtx.clearRect(0, 0, canvasCssSize, canvasCssSize);
-                    return;
+            const fitLabel = (text, width) => {
+                if (offscreenCtx.measureText(text).width <= width) return text;
+                const characters = Array.from(text);
+                let low = 0;
+                let high = characters.length;
+                while (low < high) {
+                    const mid = Math.ceil((low + high) / 2);
+                    if (offscreenCtx.measureText(characters.slice(0, mid).join('') + '…').width <= width) low = mid;
+                    else high = mid - 1;
                 }
-
+                return offscreenCtx.measureText('…').width <= width ? characters.slice(0, low).join('') + '…' : '';
+            };
+            const setCanvasSize = () => {
+                const size = Math.max(1, Math.floor(Math.min(wheelColumn.clientWidth, 800, window.innerHeight * .85)));
+                const scale = window.devicePixelRatio || 1;
+                if (size === canvasCssSize && scale === canvasScale) return;
+                canvasCssSize = size;
+                canvasScale = scale;
+                wheelStage.style.width = `${size}px`;
+                [wheelCanvas, confettiCanvas, offscreenCanvas].forEach(canvas => {
+                    canvas.width = Math.round(size * scale);
+                    canvas.height = Math.round(size * scale);
+                });
+                [ctx, confettiCtx, offscreenCtx].forEach(context => context.setTransform(scale, 0, 0, scale, 0, 0));
+            };
+            const prerenderWheel = () => {
                 offscreenCtx.clearRect(0, 0, canvasCssSize, canvasCssSize);
-                offscreenCtx.save();
-                offscreenCtx.translate(radius, radius);
-
-                names.forEach((name, i) => {
-                    const angle = i * anglePerSegment;
+                if (!names.length) return;
+                const radius = canvasCssSize / 2;
+                const angle = fullRotation / names.length;
+                const outerText = Math.max(1, radius - Math.min(58, radius * .3));
+                const fontSize = Math.max(8, Math.min(50, radius / 6.5 - names.length * .5, angle * outerText * .7));
+                const innerText = angle >= Math.PI ? Math.min(24, outerText / 4)
+                    : Math.min(outerText, Math.max(24, fontSize / (2 * Math.tan(angle / 2)) + 4));
+                const labelWidth = Math.max(0, outerText - innerText);
+                const segmentPath = index => {
                     offscreenCtx.beginPath();
                     offscreenCtx.moveTo(0, 0);
-                    offscreenCtx.arc(0, 0, radius - 2, angle, angle + anglePerSegment);
+                    offscreenCtx.arc(0, 0, Math.max(0, radius - 2), index * angle, (index + 1) * angle);
                     offscreenCtx.closePath();
-                    offscreenCtx.fillStyle = currentColors[i % currentColors.length];
+                };
+                offscreenCtx.save();
+                offscreenCtx.translate(radius, radius);
+                names.forEach((name, index) => {
+                    segmentPath(index);
+                    offscreenCtx.fillStyle = currentColors[index % currentColors.length];
                     offscreenCtx.fill();
-
-                    const strokeStyle = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? "#1a1a1a" : "#ffffff";
-                    offscreenCtx.lineWidth = 3;
-                    offscreenCtx.strokeStyle = strokeStyle;
+                    offscreenCtx.lineWidth = 2;
+                    offscreenCtx.strokeStyle = document.documentElement.dataset.bsTheme === 'light' ? '#ffffff' : '#1a1a1a';
                     offscreenCtx.stroke();
-
-                    // Draw text rotated for each segment
+                });
+                names.forEach((name, index) => {
                     offscreenCtx.save();
-                    offscreenCtx.rotate(angle + anglePerSegment / 2);
-                    offscreenCtx.fillStyle = "#fff";
+                    segmentPath(index);
+                    offscreenCtx.clip();
+                    offscreenCtx.rotate((index + .5) * angle);
+                    offscreenCtx.fillStyle = textColor(currentColors[index % currentColors.length]);
                     offscreenCtx.font = `bold ${fontSize}px Arial`;
-                    offscreenCtx.textAlign = "right";
-                    offscreenCtx.textBaseline = "middle";
-                    offscreenCtx.shadowColor = "black";
-                    offscreenCtx.shadowBlur = 2;
-                    const textX = Math.round(radius - 10); // Slightly more padding
-                    const textY = 0;
-                    offscreenCtx.fillText(name, textX, textY);
+                    offscreenCtx.textAlign = 'right';
+                    offscreenCtx.textBaseline = 'middle';
+                    offscreenCtx.fillText(fitLabel(name, labelWidth), outerText, 0);
                     offscreenCtx.restore();
                 });
                 offscreenCtx.restore();
-
-                ctx.imageSmoothingEnabled = true;
             };
-
-            const updateNames = () => {
-                names = namesInput.value.split('\n').filter(name => name.trim() !== '');
-                const numSegments = names.length;
-                const canvasSize = getCanvasSize();
-                setCanvasSize(canvasSize);
-
-                if (numSegments === 0) {
-                    isSpinning = false;
-                    lastWinnerIndex = -1;
-                    pendingWinnerIndex = -1;
-                    confetti = [];
-                    if (offscreenCtx) {
-                        offscreenCtx.clearRect(0, 0, canvasCssSize, canvasCssSize);
-                    }
-                    drawWheel();
-                    return;
-                }
-                const radius = canvasSize / 2;
-                const fontSize = getDynamicFontSize(numSegments, radius);
-
-                const backingSize = Math.round(canvasSize * canvasScale);
-                if (!offscreenCanvas || offscreenCanvas.width !== backingSize) {
-                    offscreenCanvas = document.createElement('canvas');
-                    offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: false });
-                }
-                offscreenCanvas.width = backingSize;
-                offscreenCanvas.height = backingSize;
-                offscreenCtx.setTransform(canvasScale, 0, 0, canvasScale, 0, 0);
-
-                const anglePerSegment = 2 * Math.PI / numSegments;
-                prerenderWheel(numSegments, radius, fontSize, anglePerSegment);
-                drawWheel();
-            };
-
-            const shuffleNames = () => {
-                for (let i = names.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [names[i], names[j]] = [names[j], names[i]];
-                }
-                namesInput.value = names.join('\n');
-                updateNames();
-            };
-
             const drawWheel = () => {
-                const numSegments = names.length;
-                if (numSegments === 0) {
-                    ctx.clearRect(0, 0, canvasCssSize, canvasCssSize);
-                    confettiCtx.clearRect(0, 0, canvasCssSize, canvasCssSize);
-                    return;
-                }
-
-                const radius = canvasCssSize / 2;
-
-                // Draw pre-rendered wheel with rotation
                 ctx.clearRect(0, 0, canvasCssSize, canvasCssSize);
+                if (!names.length) return;
+                const radius = canvasCssSize / 2;
                 ctx.save();
                 ctx.translate(radius, radius);
                 ctx.rotate(rotation);
                 ctx.drawImage(offscreenCanvas, -radius, -radius, canvasCssSize, canvasCssSize);
                 ctx.restore();
-
-                // Draw pointer (static)
-                ctx.fillStyle = "#adb5bd";
+                ctx.fillStyle = '#adb5bd';
                 ctx.beginPath();
                 ctx.moveTo(radius - 15, 5);
                 ctx.lineTo(radius + 15, 5);
-                ctx.lineTo(radius, 45);
+                ctx.lineTo(radius, Math.min(45, canvasCssSize * .2));
                 ctx.closePath();
                 ctx.fill();
-                ctx.strokeStyle = "black";
+                ctx.strokeStyle = '#000000';
                 ctx.lineWidth = 1;
                 ctx.stroke();
             };
-
-            const announceWinner = () => {
-                const winnerIndex = pendingWinnerIndex;
-                const invalidWinner = winnerIndex < 0 || winnerIndex >= names.length ||
-                    (!spinAllowsExcluded && excludedNames.has(names[winnerIndex]));
-                pendingWinnerIndex = -1;
-                spinAllowsExcluded = false;
-                if (invalidWinner) {
+            const redraw = () => {
+                setCanvasSize();
+                prerenderWheel();
+                drawWheel();
+            };
+            const updateNames = () => {
+                if (isSpinning) {
+                    namesInput.value = spinSnapshot.entries;
                     return;
                 }
-                lastWinnerIndex = winnerIndex;
-                winnerNameElement.textContent = names[lastWinnerIndex];
-                winnerModal.show(); launchConfetti();
+                names = namesInput.value.split('\n').filter(name => name.trim() !== '');
+                lastWinnerIndex = -1;
+                hasResult = false;
+                confetti = [];
+                confettiCtx.clearRect(0, 0, canvasCssSize, canvasCssSize);
+                redraw();
+                updateControls();
             };
-            const easeInOutQuint = (t) => t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2;
+            const announceWinner = () => {
+                lastWinnerIndex = pendingWinnerIndex;
+                lastWinnerName = spinSnapshot.names[lastWinnerIndex];
+                pendingWinnerIndex = -1;
+                spinSnapshot = null;
+                hasResult = true;
+                winnerModal.show(() => {
+                    winnerNameElement.textContent = lastWinnerName;
+                    launchConfetti();
+                });
+            };
+            const startSpin = () => {
+                if (isSpinning || importInProgress || !names.length || activeModal) return;
+                spinSnapshot = { names: [...names], entries: namesInput.value, excluded: new Set(excludedNames) };
+                pendingWinnerIndex = data.selectIndex(spinSnapshot.names, spinSnapshot.excluded);
+                isSpinning = true;
+                hasResult = false;
+                lastWinnerIndex = -1;
+                spinStartTime = performance.now();
+                startRotation = normalizeAngle(rotation);
+                const anglePerSegment = fullRotation / spinSnapshot.names.length;
+                const targetRotation = normalizeAngle(1.5 * Math.PI - (pendingWinnerIndex + .5) * anglePerSegment);
+                totalSpinAngle = (Math.floor(Math.random() * 10) + 15) * fullRotation + normalizeAngle(targetRotation - startRotation);
+                updateControls();
+            };
+            const easeInOutQuint = progress => progress < .5 ? 16 * progress ** 5 : 1 - (-2 * progress + 2) ** 5 / 2;
             const animate = () => {
                 if (isSpinning) {
-                    const elapsedTime = Date.now() - spinStartTime;
-                    if (elapsedTime >= spinDuration) {
+                    const elapsed = performance.now() - spinStartTime;
+                    if (elapsed >= spinDuration) {
+                        rotation = normalizeAngle(startRotation + totalSpinAngle);
                         isSpinning = false;
-                        rotation = startRotation + totalSpinAngle;
                         drawWheel();
                         announceWinner();
+                        updateControls();
                     } else {
-                        const progress = elapsedTime / spinDuration;
-                        const easedProgress = easeInOutQuint(progress);
-                        rotation = startRotation + totalSpinAngle * easedProgress;
+                        rotation = startRotation + totalSpinAngle * easeInOutQuint(elapsed / spinDuration);
                         drawWheel();
                     }
-                } else {
-                    // Subtle idle rotation only when not spinning
-                    rotation += 0.0005;
+                } else if (!hasResult && names.length) {
+                    rotation = normalizeAngle(rotation + .0005);
                     drawWheel();
                 }
                 updateConfetti();
                 requestAnimationFrame(animate);
             };
-            const startSpin = () => {
-                const eligibleIndices = getEligibleIndices();
-                const fallbackToExcluded = eligibleIndices.length === 0;
-                const spinIndices = !fallbackToExcluded
-                    ? eligibleIndices
-                    : names.map((entryName, index) => index);
-                if (isSpinning || spinIndices.length === 0) return;
+            function launchConfetti() {
+                confetti = Array.from({ length: 200 }, () => ({
+                    x: canvasCssSize / 2, y: canvasCssSize / 2,
+                    color: currentColors[Math.floor(Math.random() * currentColors.length)],
+                    size: Math.random() * 5 + 2, speed: Math.random() * 10 + 5,
+                    angle: Math.random() * fullRotation, life: 1
+                }));
+            }
+            function updateConfetti() {
+                if (!confetti.length) return;
+                confettiCtx.clearRect(0, 0, canvasCssSize, canvasCssSize);
+                for (let index = confetti.length - 1; index >= 0; index--) {
+                    const particle = confetti[index];
+                    particle.x += Math.cos(particle.angle) * particle.speed;
+                    particle.y += Math.sin(particle.angle) * particle.speed;
+                    particle.life -= .02;
+                    particle.speed *= .98;
+                    if (particle.life <= 0) confetti.splice(index, 1);
+                    else {
+                        confettiCtx.beginPath();
+                        confettiCtx.arc(particle.x, particle.y, particle.size, 0, fullRotation);
+                        confettiCtx.fillStyle = particle.color;
+                        confettiCtx.globalAlpha = particle.life;
+                        confettiCtx.fill();
+                    }
+                }
+                confettiCtx.globalAlpha = 1;
+                if (!confetti.length) confettiCtx.clearRect(0, 0, canvasCssSize, canvasCssSize);
+            }
 
-                isSpinning = true;
-                spinStartTime = Date.now();
-                startRotation = rotation;
-                lastWinnerIndex = -1;
-                spinAllowsExcluded = fallbackToExcluded;
-                pendingWinnerIndex = spinIndices[Math.floor(Math.random() * spinIndices.length)];
-
-                const fullRotation = 2 * Math.PI;
-                const anglePerSegment = fullRotation / names.length;
-                const targetAngle = (pendingWinnerIndex + 0.5) * anglePerSegment;
-                const targetRotation = (1.5 * Math.PI - targetAngle + fullRotation) % fullRotation;
-                const currentRotation = ((startRotation % fullRotation) + fullRotation) % fullRotation;
-                const rotationDelta = (targetRotation - currentRotation + fullRotation) % fullRotation;
-                const randomRotations = Math.floor(Math.random() * 10) + 15;
-                totalSpinAngle = (randomRotations * fullRotation) + rotationDelta;
+            const handleLoadList = () => {
+                if (isSpinning || !data.hasOwn(store.lists, savedListsDropdown.value)) return;
+                const name = savedListsDropdown.value;
+                const record = store.lists[name];
+                namesInput.value = record.entries;
+                excludedNames = new Set(record.excluded);
+                listNameInput.value = name;
+                updateNames();
             };
-            const handleRemoveWinner = () => {
-                if (lastWinnerIndex > -1) {
+            const handleSaveList = () => {
+                if (isSpinning) return;
+                const name = listNameInput.value.trim();
+                if (!name) return showModal('Save Error', 'Please enter a name for the list.');
+                const next = data.copyLists(store.lists);
+                next[name] = { entries: namesInput.value, excluded: [...excludedNames] };
+                if (!commitLists(next)) return;
+                savedListsDropdown.value = name;
+                updateControls();
+                showModal('Success', `List "${name}" saved!`);
+            };
+            const handleDeleteList = () => {
+                if (isSpinning) return;
+                const name = savedListsDropdown.value;
+                if (!data.hasOwn(store.lists, name)) return;
+                showModal('Confirm Deletion', `Delete the saved list "${name}"?`, [
+                    { label: 'Cancel' },
+                    { label: 'Delete', class: 'btn-danger', onClick: () => {
+                        const next = data.copyLists(store.lists);
+                        delete next[name];
+                        if (commitLists(next)) {
+                            listNameInput.value = '';
+                            showModal('Deleted', `List "${name}" has been deleted.`);
+                        }
+                    } }
+                ]);
+            };
+            const applyImport = (imported, replace) => {
+                const before = data.copyLists(store.lists);
+                const importedNames = Object.keys(imported);
+                const added = importedNames.filter(name => !data.hasOwn(before, name)).length;
+                const replaced = replace ? importedNames.length - added : 0;
+                if (!added && !replaced) return showModal('Import Complete', 'No saved lists were changed.');
+                if (!commitLists(data.mergeLists(before, imported, replace))) return;
+                undoImport = before;
+                updateControls();
+                showModal('Import Complete', `Added ${added} list(s), replaced ${replaced}. Undo Last Import is available until the next saved-list change or page reload.`);
+            };
+            const handleImport = event => {
+                const file = event.target.files[0];
+                event.target.value = '';
+                if (!file || isSpinning || importInProgress) return;
+                importInProgress = true;
+                updateControls();
+                const reader = new FileReader();
+                const finish = () => {
+                    importInProgress = false;
+                    updateControls();
+                };
+                reader.onload = () => {
+                    finish();
+                    let imported;
+                    try {
+                        imported = data.normalizeLists(JSON.parse(reader.result)).lists;
+                    } catch (error) {
+                        return showModal('Import Error', 'Could not import this file. Choose a valid supported list JSON file.');
+                    }
+                    const conflicts = Object.keys(imported).filter(name => data.hasOwn(store.lists, name));
+                    if (!conflicts.length) return applyImport(imported, false);
+                    showModal('Import Conflicts', `${conflicts.length} list name(s) already exist. Choose whether to keep or replace the existing lists.`, [
+                        { label: 'Cancel' },
+                        { label: 'Keep Existing', class: 'btn-primary', onClick: () => applyImport(imported, false) },
+                        { label: 'Replace Existing', class: 'btn-danger', onClick: () => applyImport(imported, true) }
+                    ]);
+                };
+                reader.onerror = () => {
+                    finish();
+                    showModal('Import Error', 'The file could not be read. Please choose it again.');
+                };
+                reader.onabort = finish;
+                try {
+                    reader.readAsText(file);
+                } catch (error) {
+                    finish();
+                    showModal('Import Error', 'The file could not be read. Please choose it again.');
+                }
+            };
+
+            namesInput.addEventListener('input', updateNames);
+            spinButton.addEventListener('click', startSpin);
+            wheelCanvas.addEventListener('click', startSpin);
+            shuffleButton.addEventListener('click', () => {
+                if (isSpinning) return;
+                for (let index = names.length - 1; index > 0; index--) {
+                    const other = Math.floor(Math.random() * (index + 1));
+                    [names[index], names[other]] = [names[other], names[index]];
+                }
+                namesInput.value = names.join('\n');
+                updateNames();
+            });
+            removeWinnerBtn.addEventListener('click', () => {
+                if (lastWinnerIndex >= 0 && names[lastWinnerIndex] === lastWinnerName) {
                     names.splice(lastWinnerIndex, 1);
                     namesInput.value = names.join('\n');
-                    lastWinnerIndex = -1;
                     updateNames();
                 }
                 winnerModal.hide();
-            };
-
-            const updateListsDropdown = () => {
-                const selectedValue = savedListsDropdown.value;
-                savedListsDropdown.innerHTML = '<option selected disabled>Load a saved list...</option>';
-                for (const listName in savedLists) {
-                    const option = document.createElement('option');
-                    option.value = listName; option.textContent = listName;
-                    savedListsDropdown.appendChild(option);
-                } savedListsDropdown.value = selectedValue;
-            };
-            const saveListsToStorage = () => localStorage.setItem('spinSelectorLists', JSON.stringify({
-                version: 2,
-                lists: savedLists
-            }));
-            const loadListsFromStorage = () => {
-                const listsJSON = localStorage.getItem('spinSelectorLists');
-                try {
-                    const normalizedLists = listsJSON ? normalizeListsData(JSON.parse(listsJSON)) : {};
-                    if (!normalizedLists) {
-                        savedLists = {};
-                        localStorage.removeItem('spinSelectorLists');
-                    } else {
-                        savedLists = normalizedLists;
-                    }
-                } catch (error) {
-                    savedLists = {};
-                    localStorage.removeItem('spinSelectorLists');
-                }
-                updateListsDropdown();
-            };
-            const handleSaveList = () => {
-                const listName = listNameInput.value.trim();
-                if (!listName) {
-                    showModal('Save Error', 'Please enter a name for the list.');
-                    return;
-                }
-                const listRecord = {
-                    entries: namesInput.value,
-                    excluded: getExcludedNamesInEntries()
-                };
-                excludedNames = new Set(listRecord.excluded);
-                savedLists[listName] = listRecord;
-                saveListsToStorage(); updateListsDropdown();
-                savedListsDropdown.value = listName;
-                showModal('Success', `List "${listName}" saved!`);
-            };
-            const handleLoadList = () => {
-                const listName = savedListsDropdown.value;
-                if (Object.hasOwn(savedLists, listName)) {
-                    const listRecord = savedLists[listName];
-                    namesInput.value = listRecord.entries;
-                    excludedNames = new Set(listRecord.excluded);
-                    listNameInput.value = listName;
-                    updateNames();
-                }
-            };
-            const handleDeleteList = () => {
-                const listName = savedListsDropdown.value;
-                if (Object.hasOwn(savedLists, listName)) {
-                    showModal('Confirm Deletion', `Are you sure you want to delete the list "${listName}"?`, [
-                        {
-                            label: 'Cancel',
-                            class: 'btn-secondary'
-                        },
-                        {
-                            label: 'Delete',
-                            class: 'btn-danger',
-                            onClick: () => {
-                                delete savedLists[listName];
-                                saveListsToStorage();
-                                updateListsDropdown();
-                                listNameInput.value = '';
-                                showModal('Deleted', `List "${listName}" has been deleted.`);
-                            }
-                        }
-                    ]);
-                } else {
-                    showModal('Delete Error', 'Please select a list to delete.');
-                }
-            };
-
-            const handleExport = () => {
-                if (Object.keys(savedLists).length === 0) {
-                    showModal('Export Error', 'There are no saved lists to export.');
-                    return;
-                }
-                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
-                    version: 2,
-                    lists: savedLists
-                }));
-                const downloadAnchorNode = document.createElement('a');
-                downloadAnchorNode.setAttribute("href", dataStr);
-                downloadAnchorNode.setAttribute("download", "spinselector_lists.json");
-                document.body.appendChild(downloadAnchorNode);
-                downloadAnchorNode.click();
-                downloadAnchorNode.remove();
-            };
-
-            const handleImport = (event) => {
-                const file = event.target.files[0];
-                if (!file) return; const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const importedLists = normalizeListsData(JSON.parse(e.target.result));
-                        if (!importedLists) {
-                            throw new Error('Invalid list file');
-                        }
-                        savedLists = { ...savedLists, ...importedLists };
-                        saveListsToStorage(); updateListsDropdown();
-                        showModal('Success', 'Lists imported successfully!');
-                    } catch (error) {
-                        showModal('Import Error', 'Could not import file. Please ensure it is a valid JSON file.');
-                    }
-                };
-                reader.readAsText(file);
-                event.target.value = '';
-            };
-
-            const handleThemeChange = (e) => {
-                e.preventDefault();
-                const themeName = e.target.dataset.theme;
-                if (themes[themeName]) {
-                    currentColors = themes[themeName];
-                    document.documentElement.setAttribute('data-bs-theme', themeName === 'light' ? 'light' : 'dark');
-                    closeDropdowns();
-                    updateNames(); // Trigger pre-render on theme change
-                }
-            };
-
-            function launchConfetti() {
-                confetti = [];
-                const count = 200;
-                for (let i = 0; i < count; i++) {
-                    confetti.push({
-                        x: canvasCssSize / 2,
-                        y: canvasCssSize / 2,
-                        color: currentColors[Math.floor(Math.random() * currentColors.length)],
-                        size: Math.random() * 5 + 2,
-                        speed: Math.random() * 10 + 5,
-                        angle: Math.random() * Math.PI * 2, life: 1,
-                    });
-                }
-            }
-            function updateConfetti() {
-                confettiCtx.clearRect(0, 0, canvasCssSize, canvasCssSize);
-                for (let i = confetti.length - 1; i >= 0; i--) {
-                    const p = confetti[i];
-                    p.x += Math.cos(p.angle) * p.speed;
-                    p.y += Math.sin(p.angle) * p.speed;
-                    p.life -= 0.02; p.speed *= 0.98;
-                    if (p.life <= 0) {
-                        confetti.splice(i, 1);
-                    } else {
-                        confettiCtx.beginPath();
-                        confettiCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                        confettiCtx.fillStyle = p.color;
-                        confettiCtx.globalAlpha = p.life;
-                        confettiCtx.fill();
-                    }
-                } confettiCtx.globalAlpha = 1;
-            }
-
-            namesInput.addEventListener('input', updateNames);
-            shuffleButton.addEventListener('click', shuffleNames);
-            wheelCanvas.addEventListener('click', startSpin);
-            removeWinnerBtn.addEventListener('click', handleRemoveWinner);
-            themeSelector.addEventListener('click', handleThemeChange);
+            });
+            themeSelector.addEventListener('click', event => {
+                const theme = event.target.closest('[data-theme]')?.dataset.theme;
+                if (!data.hasOwn(themes, theme)) return;
+                event.preventDefault();
+                currentColors = themes[theme];
+                document.documentElement.dataset.bsTheme = theme === 'light' ? 'light' : 'dark';
+                closeDropdowns();
+                redraw();
+            });
             saveListBtn.addEventListener('click', handleSaveList);
             savedListsDropdown.addEventListener('change', handleLoadList);
+            loadListBtn.addEventListener('click', handleLoadList);
             deleteListBtn.addEventListener('click', handleDeleteList);
-            exportListsBtn.addEventListener('click', handleExport);
+            exportListsBtn.addEventListener('click', () => {
+                if (!Object.keys(store.lists).length) return showModal('Export Error', 'There are no saved lists to export.');
+                downloadText(data.serialize(store.lists), 'spinselector_lists.json');
+            });
+            importListsBtn.addEventListener('click', () => { if (!isSpinning && !importInProgress) importFileInput.click(); });
             importFileInput.addEventListener('change', handleImport);
-            aboutBtn.addEventListener('click', () => aboutModal.show());
+            undoImportBtn.addEventListener('click', () => {
+                if (!isSpinning && undoImport && commitLists(undoImport)) showModal('Import Undone', 'The saved lists from before the last import have been restored.');
+            });
+            document.getElementById('about-btn').addEventListener('click', () => aboutModal.show());
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(redraw, 100);
+            });
+            if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => redraw()).observe(wheelColumn);
 
-            loadListsFromStorage();
+            const loaded = store.load();
+            if (loaded.unavailable) setStorageNotice('Browser storage is unavailable. The wheel can still be used, but saved-list changes may fail.');
+            else if (loaded.recovery) setStorageNotice('Some saved data could not be loaded. The original data is protected; use Recover Saved Lists to review your options.');
+            updateListsDropdown();
             updateNames();
             animate();
         });
